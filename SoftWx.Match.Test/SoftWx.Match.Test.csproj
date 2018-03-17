@@ -49,8 +49,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="EditDistanceReference.cs" />
-    <Compile Include="EditDistanceTest.cs" />
+    <Compile Include="DamerauOSATest.cs" />
+    <Compile Include="LevenshteinTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TestHelper.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

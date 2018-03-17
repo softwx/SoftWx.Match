@@ -3,30 +3,24 @@
   <PropertyGroup>
     <TargetFramework>netstandard1.0</TargetFramework>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>1.1.0</Version>
+    <Version>2.0.0</Version>
     <Authors>Steve Hatchett</Authors>
     <Company>SoftWx, Inc.</Company>
-    <Description>Library to support text and person name matching.
-Currently contains Levenshtein and Damerau-Levenshtein (optimal string alignment version) edit distance functions optimized for speed and reduced memory consumption. There are also versions of the functions that accept a maximum desired distance, which can result in even greater speed, particularly for long strings. This is one of the faster C# implementations available (possibly the fastest for non-trivial strings).</Description>
+    <Description>Library (.Net Standard 1.0) to support text and person name matching.</Description>
     <Copyright>Copyright ©  2015-2018 SoftWx, Inc.</Copyright>
     <PackageLicenseUrl>https://github.com/softwx/SoftWx.Match/blob/master/LICENSE</PackageLicenseUrl>
     <PackageProjectUrl>https://github.com/softwx/SoftWx.Match</PackageProjectUrl>
     <PackageIconUrl>http://www.softwx.net/files/images/softwx50x50.png</PackageIconUrl>
     <RepositoryType>github</RepositoryType>
     <RepositoryUrl>https://github.com/softwx/SoftWx.Match</RepositoryUrl>
-    <PackageReleaseNotes>Changed to .net standard 1.2 from PCL
-Added maxDistance version of Levenshtein
-Made instantiable class for edit distance methods
-Rearranged code to lessen code duplication
-Minor speed optimization tweaks
-Greatly reduced memory allocation when using instantiated class</PackageReleaseNotes>
+    <PackageReleaseNotes>Initial Nuget version</PackageReleaseNotes>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsAsErrors />
     <DocumentationFile></DocumentationFile>
-    <GenerateSerializationAssemblies>Off</GenerateSerializationAssemblies>
+    <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
     <LangVersion>default</LangVersion>
     <DebugType>portable</DebugType>
     <DebugSymbols>true</DebugSymbols>
@@ -40,8 +34,15 @@ Greatly reduced memory allocation when using instantiated class</PackageReleaseN
     <DocumentationFile></DocumentationFile>
     <GenerateSerializationAssemblies>Off</GenerateSerializationAssemblies>
     <LangVersion>default</LangVersion>
-    <DebugType>portable</DebugType>
+    <DebugType>full</DebugType>
     <DebugSymbols>true</DebugSymbols>
     <NoWarn>1701;1702;1705</NoWarn>
+    <Optimize>false</Optimize>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="EditDistanceOld.cs" />
+    <Compile Remove="ISimilarity.cs" />
+    <Compile Remove="StringExtensions.cs" />
+  </ItemGroup>
  </Project>

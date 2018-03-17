@@ -11,7 +11,6 @@ namespace SoftWx.Match.Benchmark {
     // see https://github.com/softwx/SoftWx.Match for project details.
     class Program {
         static void Main(string[] args) {
-            var dist = new EditDistance();
             TimeLevenshtein();
             Console.WriteLine();
             TimeDamLev();
@@ -78,20 +77,20 @@ namespace SoftWx.Match.Benchmark {
         }
         static int RunLevenshtein(List<string> strings) {
             int result = 0;
-            var dist = new EditDistance();
+            var dist = new Levenshtein();
             for (int i = 0; i < strings.Count; i++) {
                 for (int j = 0; j < strings.Count; j++) {
-                    result = dist.Levenshtein(strings[i], strings[j]);
+                    result = (int)dist.Distance(strings[i], strings[j]);
                 }
             }
             return result;
         }
         static int RunDamLev(List<string> strings) {
             int result = 0;
-            var dist = new EditDistance();
+            var dist = new DamerauOSA();
             for (int i = 0; i < strings.Count; i++) {
                 for (int j = 0; j < strings.Count; j++) {
-                    result = dist.DamLev(strings[i], strings[j]);
+                    result = (int)dist.Distance(strings[i], strings[j]);
                 }
             }
             return result;
@@ -100,7 +99,7 @@ namespace SoftWx.Match.Benchmark {
             int result = 0;
             for (int i = 0; i < strings.Count; i++) {
                 for (int j = 0; j < strings.Count; j++) {
-                    result = EditDistance.StaticLevenshtein(strings[i], strings[j]);
+                    result = Distance.Levenshtein(strings[i], strings[j]);
                 }
             }
             return result;
@@ -109,7 +108,7 @@ namespace SoftWx.Match.Benchmark {
             int result = 0;
             for (int i = 0; i < strings.Count; i++) {
                 for (int j = 0; j < strings.Count; j++) {
-                    result = EditDistance.StaticDamLev(strings[i], strings[j]);
+                    result = Distance.DamerauOSA(strings[i], strings[j]);
                 }
             }
             return result;
@@ -118,27 +117,27 @@ namespace SoftWx.Match.Benchmark {
             int result = 0;
             for (int i = 0; i < strings.Count; i++) {
                 for (int j = 0; j < strings.Count; j++) {
-                    result = EditDistance.StaticLevenshtein(strings[i], strings[j], maxDistance);
+                    result = Distance.Levenshtein(strings[i], strings[j], maxDistance);
                 }
             }
             return result;
         }
         static int RunLevenshtein(List<string> strings, int maxDistance) {
             int result = 0;
-            var dist = new EditDistance();
+            var dist = new Levenshtein();
             for (int i = 0; i < strings.Count; i++) {
                 for (int j = 0; j < strings.Count; j++) {
-                    result = dist.Levenshtein(strings[i], strings[j], maxDistance);
+                    result = (int)dist.Distance(strings[i], strings[j], maxDistance);
                 }
             }
             return result;
         }
         static int RunDamLev(List<string> strings, int maxDistance) {
             int result = 0;
-            var dist = new EditDistance();
+            var dist = new DamerauOSA();
             for (int i = 0; i < strings.Count; i++) {
                 for (int j = 0; j < strings.Count; j++) {
-                    result = dist.DamLev(strings[i], strings[j], maxDistance);
+                    result = (int)dist.Distance(strings[i], strings[j], maxDistance);
                 }
             }
             return result;

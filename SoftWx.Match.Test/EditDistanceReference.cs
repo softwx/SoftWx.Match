@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SoftWx.TextMatch.Tests {
+namespace SoftWx.Match.Test {
     /// <summary>
     /// Literal implementation of algorithm as described in Wikipedia entry for
     /// Levenshtein edit distance, with trivial addition of max value parameter.
@@ -24,7 +24,7 @@ namespace SoftWx.TextMatch.Tests {
             var distance = d[s.Length, t.Length];
             return (distance <= maxDistance) ? distance : -1;
         }
-        public static int RefDamLev(string s, string t, int maxDistance = int.MaxValue) {
+        public static int RefDamerauOSA(string s, string t, int maxDistance = int.MaxValue) {
             if (maxDistance < 0) maxDistance = 0;
             int cost;
             var d = new int[s.Length + 1, t.Length + 1];
