@@ -1,5 +1,6 @@
 # SoftWx.Match
 ##### C# library to text and person name fuzzy matching
+Available as a nuget package [SoftWx.Match](https://www.nuget.org/packages/SoftWx.Match/)
 
 This project started as a place to put code related to a series of blog posts I made on optimizing the Levenshtein and Damerau-Levenshtein algorithms:
 
