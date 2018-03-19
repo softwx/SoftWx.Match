@@ -3,18 +3,21 @@
   <PropertyGroup>
     <TargetFramework>netstandard1.0</TargetFramework>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>2.0.0</Version>
+    <Version>2.0.2</Version>
     <Authors>Steve Hatchett</Authors>
     <Company>SoftWx, Inc.</Company>
-    <Description>Library (.Net Standard 1.0) to support text and person name matching.</Description>
+    <Description>Library (.Net Standard 1.0) to support text and person name matching.
+Currently contains Levenshtein and Damerau-Levenshtein (optimal string alignment version) edit distance functions optimized for speed and reduced memory consumption. There are also versions of the functions that accept a maximum desired distance, which can result in very significantly faster speeds, particularly for long strings. This is one of the faster C# implementations available (possibly the fastest for non-trivial strings). See the associated GitHub project for more detail.
+MIT License</Description>
     <Copyright>Copyright ©  2015-2018 SoftWx, Inc.</Copyright>
     <PackageLicenseUrl>https://github.com/softwx/SoftWx.Match/blob/master/LICENSE</PackageLicenseUrl>
     <PackageProjectUrl>https://github.com/softwx/SoftWx.Match</PackageProjectUrl>
     <PackageIconUrl>http://www.softwx.net/files/images/softwx50x50.png</PackageIconUrl>
     <RepositoryType>github</RepositoryType>
     <RepositoryUrl>https://github.com/softwx/SoftWx.Match</RepositoryUrl>
-    <PackageReleaseNotes>Initial Nuget version</PackageReleaseNotes>
-    <PackageTags>Levenshtein Damerau</PackageTags>
+    <PackageReleaseNotes>v2.0.2 Corrected some comments, added Levenshtein similarity functions, added xml docs
+v2.0.0 Initial Nuget version</PackageReleaseNotes>
+    <PackageTags>levenshtein damerau matching fuzzy softwx</PackageTags>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -32,7 +35,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsAsErrors />
-    <DocumentationFile></DocumentationFile>
+    <DocumentationFile>bin\Debug\netstandard1.0\SoftWx.Match.xml</DocumentationFile>
     <GenerateSerializationAssemblies>Off</GenerateSerializationAssemblies>
     <LangVersion>default</LangVersion>
     <DebugType>full</DebugType>
@@ -43,7 +46,6 @@
 
   <ItemGroup>
     <Compile Remove="EditDistanceOld.cs" />
-    <Compile Remove="ISimilarity.cs" />
     <Compile Remove="StringExtensions.cs" />
   </ItemGroup>
  </Project>

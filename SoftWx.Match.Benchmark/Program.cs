@@ -21,9 +21,12 @@ namespace SoftWx.Match.Benchmark {
         static void TimeLevenshtein() {
             var bench = new Bench(10, 500, true);
             int val;
+            double dval;
             var strings = BuildTestStrings(0, 5);
             bench.Time("Lev 0-5", () => val = RunLevenshtein(strings), strings.Count * strings.Count);
             bench.Time("Lev 0-5 static", () => val = RunLevenshteinStatic(strings), strings.Count * strings.Count);
+            bench.Time("Lev 0-5 similarity", () => dval = RunLevenshteinSim(strings), strings.Count * strings.Count);
+            bench.Time("Lev 0-5 static similarity", () => dval = RunLevenshteinSimStatic(strings), strings.Count * strings.Count);
             bench.Time("Lev 0-5 max huge", () => val = RunLevenshtein(strings, 9999), strings.Count * strings.Count);
             bench.Time("Lev 0-5 max huge static", () => val = RunLevenshteinStatic(strings, 9999), strings.Count * strings.Count);
             bench.Time("Lev 0-5 max 2", () => val = RunLevenshtein(strings, 2), strings.Count * strings.Count);
@@ -32,6 +35,8 @@ namespace SoftWx.Match.Benchmark {
             strings = words.Where(w => w.Length >= 15 && w.Length <= 15).ToList();
             bench.Time("Lev 15", () => val = RunLevenshtein(strings), strings.Count * strings.Count);
             bench.Time("Lev 15 static", () => val = RunLevenshteinStatic(strings), strings.Count * strings.Count);
+            bench.Time("Lev 15 similarity", () => dval = RunLevenshteinSim(strings), strings.Count * strings.Count);
+            bench.Time("Lev 15 static similarity", () => dval = RunLevenshteinSimStatic(strings), strings.Count * strings.Count);
             bench.Time("Lev 15 max huge", () => val = RunLevenshtein(strings, 9999), strings.Count * strings.Count);
             bench.Time("Lev 15 max huge static", () => val = RunLevenshteinStatic(strings, 9999), strings.Count * strings.Count);
             bench.Time("Lev 15 max 14", () => val = RunLevenshtein(strings, 14), strings.Count * strings.Count);
@@ -40,16 +45,21 @@ namespace SoftWx.Match.Benchmark {
             Console.WriteLine();
             strings = words.Where(w => w.Length >= 20 && w.Length <= 22).ToList();
             bench.Time("Lev 20-22", () => val = RunLevenshtein(strings), strings.Count * strings.Count);
+            bench.Time("Lev 20-22 similarity", () => dval = RunLevenshteinSim(strings), strings.Count * strings.Count);
             bench.Time("Lev 20-22 max huge", () => val = RunLevenshtein(strings, int.MaxValue), strings.Count * strings.Count);
             bench.Time("Lev 20-22 max 3", () => val = RunLevenshtein(strings, 3), strings.Count * strings.Count);
             Console.WriteLine();
             strings = words.Where(w => w.Length >= 24).ToList();
             bench.Time("Lev >=24", () => val = RunLevenshtein(strings), strings.Count * strings.Count);
+            bench.Time("Lev >=24 static", () => val = RunLevenshteinStatic(strings), strings.Count * strings.Count);
+            bench.Time("Lev >=24 similarity", () => dval = RunLevenshteinSim(strings), strings.Count * strings.Count);
+            bench.Time("Lev >=24 static similarity", () => dval = RunLevenshteinSimStatic(strings), strings.Count * strings.Count);
             bench.Time("Lev >=24 max huge", () => val = RunLevenshtein(strings, 9999), strings.Count * strings.Count);
             bench.Time("Lev >=24 max 3", () => val = RunLevenshtein(strings, 3), strings.Count * strings.Count);
             Console.WriteLine();
             strings = words.Where(w => w.Length == 8).Take(500).Union(words.Where(w=>w.Length==20)).ToList();
             bench.Time("Lev 8 & 20", () => val = RunLevenshtein(strings), strings.Count * strings.Count);
+            bench.Time("Lev 8 & 20 similarity", () => dval = RunLevenshteinSim(strings), strings.Count * strings.Count);
             bench.Time("Lev 8 & 20 max 14", () => val = RunLevenshtein(strings, 14), strings.Count * strings.Count);
         }
         static void TimeDamLev() {
@@ -138,6 +148,25 @@ namespace SoftWx.Match.Benchmark {
             for (int i = 0; i < strings.Count; i++) {
                 for (int j = 0; j < strings.Count; j++) {
                     result = (int)dist.Distance(strings[i], strings[j], maxDistance);
+                }
+            }
+            return result;
+        }
+        static double RunLevenshteinSim(List<string> strings) {
+            double result = 0;
+            var dist = new Levenshtein();
+            for (int i = 0; i < strings.Count; i++) {
+                for (int j = 0; j < strings.Count; j++) {
+                    result = (int)dist.Similarity(strings[i], strings[j]);
+                }
+            }
+            return result;
+        }
+        static double RunLevenshteinSimStatic(List<string> strings) {
+            double result = 0;
+            for (int i = 0; i < strings.Count; i++) {
+                for (int j = 0; j < strings.Count; j++) {
+                    result = Similarity.Levenshtein(strings[i], strings[j]);
                 }
             }
             return result;
