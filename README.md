@@ -45,7 +45,7 @@ dist = Distance.DamerauOSA("flintstone", "hanson", 2);
 ## Similarity
 This includes classes that implement an ISimilarity interface by exposing methods for computing a nromalized measure of the similarity of two strings. Similarity results are a double value from 0 to 1.0, where 0 is no similarity at all, and 1.0 is equivalent strings.
 ### Levenshtein
-This class provides methods that compute a normalized similarity value based on the Levenshtein edit distance between two strings. The formula is similarity = 1 - (edit distance / length of longer string).
+This class provides methods that compute a normalized similarity value based on the Levenshtein edit distance between two strings. The similarity formula is 1 - (edit distance / length of longer string).
 ```
 // instantiated class version
 var ed = new Levenshtein();

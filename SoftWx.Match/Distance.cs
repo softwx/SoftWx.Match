@@ -27,13 +27,12 @@ namespace SoftWx.Match {
         /// <returns>0 if the strings are equivalent, otherwise a positive number whose
         /// magnitude increases as difference between the strings increases.</returns>
         public static int Levenshtein(this string string1, string string2) {
-            if (string1 == null || string2 == null) return Helpers.NullDistanceResults(string1, string2, int.MaxValue);
+            if (string1 == null) return (string2 ?? "").Length;
+            if (string2 == null) return string1.Length;
 
             // if strings of different lengths, ensure shorter string is in string1. This can result in a little
             // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) {
-                var temp = string1; string1 = string2; string2 = temp; // swap string1 and string2
-            }
+            if (string1.Length > string2.Length) { var t = string1; string1 = string2; string2 = t; }
 
             // identify common suffix and/or prefix that can be ignored
             int len1, len2, start;
@@ -58,9 +57,7 @@ namespace SoftWx.Match {
 
             // if strings of different lengths, ensure shorter string is in string1. This can result in a little
             // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) {
-                var temp = string1; string1 = string2; string2 = temp; // swap string1 and string2
-            }
+            if (string1.Length > string2.Length) { var t = string1; string1 = string2; string2 = t; }
             if (string2.Length - string1.Length > maxDistance) return -1;
 
             // identify common suffix and/or prefix that can be ignored
@@ -83,13 +80,12 @@ namespace SoftWx.Match {
         /// <returns>0 if the strings are equivalent, otherwise a positive number whose
         /// magnitude increases as difference between the strings increases.</returns>
         public static int DamerauOSA(this string string1, string string2) {
-            if (string1 == null || string2 == null) return Helpers.NullDistanceResults(string1, string2, int.MaxValue);
+            if (string1 == null) return (string2 ?? "").Length;
+            if (string2 == null) return string1.Length;
 
             // if strings of different lengths, ensure shorter string is in string1. This can result in a little
             // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) {
-                var temp = string1; string1 = string2; string2 = temp; // swap string1 and string2
-            }
+            if (string1.Length > string2.Length) { var t = string1; string1 = string2; string2 = t; }
 
             // identify common suffix and/or prefix that can be ignored
             int len1, len2, start;
@@ -115,9 +111,7 @@ namespace SoftWx.Match {
 
             // if strings of different lengths, ensure shorter string is in string1. This can result in a little
             // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) {
-                var temp = string1; string1 = string2; string2 = temp; // swap string1 and string2
-            }
+            if (string1.Length > string2.Length) { var t = string1; string1 = string2; string2 = t; }
             if (string2.Length - string1.Length > maxDistance) return -1;
 
             // identify common suffix and/or prefix that can be ignored

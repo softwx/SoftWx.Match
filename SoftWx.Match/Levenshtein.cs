@@ -48,13 +48,12 @@ namespace SoftWx.Match {
         /// <returns>0 if the strings are equivalent, otherwise a positive number whose
         /// magnitude increases as difference between the strings increases.</returns>
         public double Distance(string string1, string string2) {
-            if (string1 == null || string2 == null) return Helpers.NullDistanceResults(string1, string2, int.MaxValue);
+            if (string1 == null) return (string2 ?? "").Length;
+            if (string2 == null) return string1.Length;
 
             // if strings of different lengths, ensure shorter string is in string1. This can result in a little
             // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) {
-                var temp = string1; string1 = string2; string2 = temp; // swap string1 and string2
-            }
+            if (string1.Length > string2.Length) { var t = string1; string1 = string2; string2 = t; }
 
             // identify common suffix and/or prefix that can be ignored
             int len1, len2, start;
@@ -82,9 +81,7 @@ namespace SoftWx.Match {
 
             // if strings of different lengths, ensure shorter string is in string1. This can result in a little
             // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) {
-                var temp = string1; string1 = string2; string2 = temp; // swap string1 and string2
-            }
+            if (string1.Length > string2.Length) { var t = string1; string1 = string2; string2 = t; }
             if (string2.Length - string1.Length > iMaxDistance) return -1;
 
             // identify common suffix and/or prefix that can be ignored
@@ -100,32 +97,33 @@ namespace SoftWx.Match {
                 (this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2]));
         }
 
-        /// <summary>Return Levenshtein similarity between two strings (1 - (levenshtein distance / len of longer string)).</summary>
+        /// <summary>Return Levenshtein similarity between two strings
+        /// (1 - (levenshtein distance / len of longer string)).</summary>
         /// <param name="string1">One of the strings to compare.</param>
         /// <param name="string2">The other string to compare.</param>
         /// <returns>The degree of similarity 0 to 1.0, where 0 represents a lack of any
         /// noteable similarity, and 1 represents equivalent strings.</returns>
         public double Similarity(string string1, string string2) {
-            if (string1 == null || string2 == null) return Helpers.NullSimilarityResults(string1, string2, 0);
+            if (string1 == null) return (string2 == null) ? 1 : 0;
+            if (string2 == null) return 0;
 
             // if strings of different lengths, ensure shorter string is in string1. This can result in a little
             // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) {
-                var temp = string1; string1 = string2; string2 = temp; // swap string1 and string2
-            }
+            if (string1.Length > string2.Length) { var t = string1; string1 = string2; string2 = t; }
 
             // identify common suffix and/or prefix that can be ignored
             int len1, len2, start;
             Helpers.PrefixSuffixPrep(string1, string2, out len1, out len2, out start);
             if (len1 == 0) return 1.0;
 
-            return Helpers.DistanceToSimilarity(string2.Length,
-                InternalLevenshtein(string1, string2, len1, len2, start,
-                    (this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2])));
+            return InternalLevenshtein(string1, string2, len1, len2, start,
+                    (this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2]))
+                    .ToSimilarity(string2.Length);
         }
 
 
-        /// <summary>Return a measure of the similarity between two strings.</summary>
+        /// <summary>Return Levenshtein similarity between two strings 
+        /// (1 - (levenshtein distance / len of longer string)).</summary>
         /// <param name="string1">One of the strings to compare.</param>
         /// <param name="string2">The other string to compare.</param>
         /// <param name="minSimilarity">The minimum similarity that is of interest.</param>
@@ -139,57 +137,80 @@ namespace SoftWx.Match {
 
             // if strings of different lengths, ensure shorter string is in string1. This can result in a little
             // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) {
-                var temp = string1; string1 = string2; string2 = temp; // swap string1 and string2
-            }
+            if (string1.Length > string2.Length) { var t = string1; string1 = string2; string2 = t; }
+
+            int iMaxDistance = minSimilarity.ToDistance(string2.Length);
+            if (string2.Length - string1.Length > iMaxDistance) return -1;
+            if (iMaxDistance == 0) return (string1 == string2) ? 1 : -1;
 
             // identify common suffix and/or prefix that can be ignored
             int len1, len2, start;
             Helpers.PrefixSuffixPrep(string1, string2, out len1, out len2, out start);
             if (len1 == 0) return 1.0;
 
-            int iMaxDistance = (int)(string2.Length * (1 - minSimilarity));
             if (iMaxDistance < len2) {
-                return Helpers.DistanceToSimilarity(string2.Length,
-                    InternalLevenshtein(string1, string2, len1, len2, start, iMaxDistance,
-                        (this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2])));
+                return InternalLevenshtein(string1, string2, len1, len2, start, iMaxDistance,
+                        (this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2]))
+                        .ToSimilarity(string2.Length);
             }
-            return Helpers.DistanceToSimilarity(string2.Length,
-                InternalLevenshtein(string1, string2, len1, len2, start,
-                    (this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2])));
+            return InternalLevenshtein(string1, string2, len1, len2, start,
+                    (this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2]))
+                    .ToSimilarity(string2.Length);
         }
 
         /// <summary>Internal implementation of the core Levenshtein algorithm.</summary>
         /// <remarks>https://github.com/softwx/SoftWx.Match</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static int InternalLevenshtein(string string1, string string2, int len1, int len2, int start, int[] char1Costs) {
-            int j;
-            for (j = 0; j < len2;) char1Costs[j] = ++j;
+            for (int j = 0; j < len2;) char1Costs[j] = ++j;
             int currentCharCost = 0;
-            for (int i = 0; i < len1; i++) {
+            for (int i = 0; i < len1; ++i) {
                 char char1 = string1[i + start];
-                int prevChar1Cost, prevChar2Cost;
-                prevChar1Cost = prevChar2Cost = currentCharCost = i;
-                for (j = 0; j < len2; j++) {
-                    currentCharCost = prevChar1Cost; // cost on diagonal (substitution)
-                    prevChar1Cost = char1Costs[j];
-                    if (string2[j + start] != char1) {
+                int leftCharCost, aboveCharCost;
+                leftCharCost = aboveCharCost = i;
+                for (int j = 0; j < len2; ++j) {
+                    currentCharCost = leftCharCost; // cost on diagonal (substitution)
+                    leftCharCost = char1Costs[j];
+                    if (string2[start + j] != char1) {
                         // substitution if neither of two conditions below
-                        if (prevChar2Cost < currentCharCost) currentCharCost = prevChar2Cost; // deletion
-                        if (prevChar1Cost < currentCharCost) currentCharCost = prevChar1Cost;   // insertion
-                        currentCharCost++;
+                        if (aboveCharCost < currentCharCost) currentCharCost = aboveCharCost; // deletion
+                        if (leftCharCost < currentCharCost) currentCharCost = leftCharCost; // insertion
+                        ++currentCharCost;
                     }
-                    char1Costs[j] = prevChar2Cost = currentCharCost;
+                    char1Costs[j] = aboveCharCost = currentCharCost;
                 }
             }
             return currentCharCost;
         }
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //internal static int InternalLevenshteinExperiment(string string1, string string2, int len1, int len2, int start, int[] char1Costs) {
+        //    if (char1Costs[len2-1] > -len2) for (int j = 0; j < len2; ++j) char1Costs[j] = 0;
+        //    int currentCharCost = 0;
+        //    for (int i = 0; i < len1; ++i) {
+        //        char char1 = string1[i + start];
+        //        int prevChar1Cost, aboveCharCost;
+        //        prevChar1Cost = aboveCharCost = i;
+        //        for (int j = 0; j < len2; ++j) {
+        //            currentCharCost = prevChar1Cost - 1; // cost on diagonal (substitution)
+        //            prevChar1Cost = char1Costs[j];
+        //            if (string2[start + j] != char1) {
+        //                // substitution if neither of two conditions below
+        //                if (aboveCharCost <= currentCharCost) currentCharCost = aboveCharCost - 1; // deletion
+        //                if (prevChar1Cost < currentCharCost) currentCharCost = prevChar1Cost; // insertion
+        //                ++currentCharCost;
+        //            }
+        //            char1Costs[j] = aboveCharCost = currentCharCost;
+        //        }
+        //    }
+        //    return currentCharCost + len2;
+        //}
 
         /// <summary>Internal implementation of the core Levenshtein algorithm that accepts a maxDistance.</summary>
         /// <remarks>https://github.com/softwx/SoftWx.Match</remarks>
         internal static int InternalLevenshtein(string string1, string string2, int len1, int len2, int start, int maxDistance, int[] v0) {
 #if DEBUG
-            if (len2 < maxDistance) throw new ArgumentException();
+                    if (len2 < maxDistance) throw new ArgumentException();
+                    if (len2-len1 > maxDistance) throw new ArgumentException();
 #endif
             int i, j;
             for (j = 0; j < maxDistance;) v0[j] = ++j;
@@ -199,24 +220,24 @@ namespace SoftWx.Match {
             int jStart = 0;
             int jEnd = maxDistance;
             int currentCost = 0;
-            for (i = 0; i < len1; i++) {
+            for (i = 0; i < len1; ++i) {
                 char char1 = string1[start + i];
-                int prevChar1Cost, prevChar2Cost;
-                prevChar1Cost = prevChar2Cost = currentCost = i;
+                int prevChar1Cost, aboveCharCost;
+                prevChar1Cost = aboveCharCost = i;
                 // no need to look beyond window of lower right diagonal - maxDistance cells (lower right diag is i - lenDiff)
                 // and the upper left diagonal + maxDistance cells (upper left is i)
                 jStart += (i > jStartOffset) ? 1 : 0;
                 jEnd += (jEnd < len2) ? 1 : 0;
-                for (j = jStart; j < jEnd; j++) {
+                for (j = jStart; j < jEnd; ++j) {
                     currentCost = prevChar1Cost; // cost on diagonal (substitution)
                     prevChar1Cost = v0[j];
-                    if (char1 != string2[j + start]) {
+                    if (string2[start + j] != char1) {
                         // substitution if neither of two conditions below
-                        if (prevChar2Cost < currentCost) currentCost = prevChar2Cost; // deletion
+                        if (aboveCharCost < currentCost) currentCost = aboveCharCost; // deletion
                         if (prevChar1Cost < currentCost) currentCost = prevChar1Cost;   // insertion
-                        currentCost++;
+                        ++currentCost;
                     }
-                    v0[j] = prevChar2Cost = currentCost;
+                    v0[j] = aboveCharCost = currentCost;
                 }
                 if (v0[i + lenDiff] > maxDistance) return -1;
             }

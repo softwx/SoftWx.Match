@@ -1,4 +1,8 @@
-﻿using System.Runtime.CompilerServices;
+﻿// Copyright ©2015-2018 SoftWx, Inc.
+// Released under the MIT License the text of which appears at the end of this file.
+// <authors> Steve Hatchett
+
+using System.Runtime.CompilerServices;
 
 namespace SoftWx.Match {
     internal static class Helpers {
@@ -24,13 +28,15 @@ namespace SoftWx.Match {
             len1 = string1.Length; // this is also the minimun length of the two strings
             // suffix common to both strings can be ignored
             while (len1 != 0 && string1[len1 - 1] == string2[len2 - 1]) {
-                len2--; len1--;
+                len1 = len1 - 1; len2 = len2 - 1;
             }
             // prefix common to both strings can be ignored
             start = 0;
             while (start != len1 && string1[start] == string2[start]) start++;
-            len2 -= start; // length of the part excluding common prefix and suffix
-            len1 -= start;
+            if (start != 0) {
+                len2 -= start; // length of the part excluding common prefix and suffix
+                len1 -= start;
+            }
         }
 
         /// <summary>Calculate a similarity measure from an edit distance.</summary>
@@ -38,8 +44,36 @@ namespace SoftWx.Match {
         /// <param name="distance">The edit distance between two strings.</param>
         /// <returns>A similarity value from 0 to 1.0 (1 - (length / distance)).</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static double DistanceToSimilarity(int length, int distance) {
+        public static double ToSimilarity(this int distance, int length) {
             return (distance < 0) ? -1 : 1 - (distance / (double)length);
+        }
+
+        /// <summary>Calculate an edit distance from a similarity measure.</summary>
+        /// <param name="length">The length of the longer of the two strings the edit distance is from.</param>
+        /// <param name="similarity">The similarity measure between two strings.</param>
+        /// <returns>An edit distance from 0 to length (length * (1 - similarity)).</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int ToDistance(this double similarity, int length) {
+            return (int)((length * (1 - similarity)) + .0000000001);
         }
     }
 }
+/*
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*/

@@ -190,6 +190,102 @@ namespace SoftWx.Match.Test {
                 }
             });
         }
+
+        [TestMethod]
+        public void DamerauOSASimilarityShouldHandleRoundUpDownMin() {
+            var ed = new DamerauOSA();
+            var actual = ed.Similarity("123456789", "a2345aaaa", .5);
+            Assert.AreEqual(-1, actual);
+            actual = ed.Similarity("123456789", "a23456aaa", .5);
+            Assert.AreEqual(5 / 9.0, actual);
+        }
+
+        [TestMethod]
+        public void StaticLevSimilarityShouldHandleRoundUpDownMin() {
+            var actual = Similarity.Levenshtein("123456789", "a2345aaaa", .5);
+            Assert.AreEqual(-1, actual);
+            actual = Similarity.Levenshtein("123456789", "a23456aaa", .5);
+            Assert.AreEqual(5 / 9.0, actual);
+        }
+
+        [TestMethod]
+        public void DamerauOSASimilarityShouldGiveRange0To1() {
+            var ed = new DamerauOSA();
+            var actual = ed.Similarity("1234", "aaaa");
+            Assert.AreEqual(0, actual);
+            actual = ed.Similarity("1234", "a2aa");
+            Assert.AreEqual(.25, actual);
+            actual = ed.Similarity("1234", "a23a");
+            Assert.AreEqual(.5, actual);
+            actual = ed.Similarity("1234", "1a34");
+            Assert.AreEqual(.75, actual);
+            actual = ed.Similarity("1234", "1234");
+            Assert.AreEqual(1, actual);
+        }
+
+        [TestMethod]
+        public void StaticDamerauOSASimilarityShouldGiveRange0To1() {
+            var actual = Similarity.DamerauOSA("1234", "aaaa");
+            Assert.AreEqual(0, actual);
+            actual = Similarity.DamerauOSA("1234", "a2aa");
+            Assert.AreEqual(.25, actual);
+            actual = Similarity.DamerauOSA("1234", "a23a");
+            Assert.AreEqual(.5, actual);
+            actual = Similarity.DamerauOSA("1234", "1a34");
+            Assert.AreEqual(.75, actual);
+            actual = Similarity.DamerauOSA("1234", "1234");
+            Assert.AreEqual(1, actual);
+        }
+
+        [TestMethod]
+        public void DamerauOSASimilarityShouldHandleNulls() {
+            var ed = new DamerauOSA();
+            var actual = ed.Similarity(null, null);
+            Assert.AreEqual(1.0, actual);
+            actual = ed.Similarity(null, "hi");
+            Assert.AreEqual(0, actual);
+            actual = ed.Similarity("hi", null);
+            Assert.AreEqual(0, actual);
+        }
+
+        [TestMethod]
+        public void StaticLevSimilarityShouldHandleNulls() {
+            var actual = Similarity.Levenshtein(null, null);
+            Assert.AreEqual(1.0, actual);
+            actual = Similarity.Levenshtein(null, "hi");
+            Assert.AreEqual(0, actual);
+            actual = Similarity.Levenshtein("hi", null);
+            Assert.AreEqual(0, actual);
+        }
+
+        [TestMethod]
+        public void DamerauOSASimilarityShouldBeCommutative() {
+            var ed = new DamerauOSA();
+            foreach (var s1 in testStrings) {
+                foreach (var s2 in testStrings) {
+                    double d1 = ed.Similarity(s1, s2);
+                    double d2 = ed.Similarity(s2, s1);
+                    Assert.AreEqual(d1, d2);
+                    d1 = ed.Similarity(s1, s2, .5);
+                    d2 = ed.Similarity(s2, s1, .5);
+                    Assert.AreEqual(d1, d2);
+                }
+            }
+        }
+
+        [TestMethod]
+        public void StaticLevSimilarityShouldBeCommutative() {
+            foreach (var s1 in testStrings) {
+                foreach (var s2 in testStrings) {
+                    double d1 = Similarity.Levenshtein(s1, s2);
+                    double d2 = Similarity.Levenshtein(s2, s1);
+                    Assert.AreEqual(d1, d2);
+                    d1 = Similarity.Levenshtein(s1, s2, .5);
+                    d2 = Similarity.Levenshtein(s2, s1, .5);
+                    Assert.AreEqual(d1, d2);
+                }
+            }
+        }
     }
 }
 /*
