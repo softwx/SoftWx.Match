@@ -31,7 +31,7 @@ namespace SoftWx.Match {
             Helpers.PrefixSuffixPrep(string1, string2, out len1, out len2, out start);
             if (len1 == 0) return 1.0;
 
-            return Match.Levenshtein.InternalLevenshtein(string1, string2, len1, len2, start, new int[len2])
+            return Match.Levenshtein.Distance(string1, string2, len1, len2, start, new int[len2])
                 .ToSimilarity(string2.Length);
         }
 
@@ -61,10 +61,10 @@ namespace SoftWx.Match {
             if (len1 == 0) return 1.0;
 
             if (iMaxDistance < len2) {
-                return Match.Levenshtein.InternalLevenshtein(string1, string2, len1, len2, start, iMaxDistance, new int[len2])
+                return Match.Levenshtein.Distance(string1, string2, len1, len2, start, iMaxDistance, new int[len2])
                     .ToSimilarity(string2.Length);
             }
-            return Match.Levenshtein.InternalLevenshtein(string1, string2, len1, len2, start, new int[len2])
+            return Match.Levenshtein.Distance(string1, string2, len1, len2, start, new int[len2])
                 .ToSimilarity(string2.Length);
         }
         /// <summary>Return Damerau-Levenshtein optimal string alignment similarity
@@ -86,7 +86,7 @@ namespace SoftWx.Match {
             Helpers.PrefixSuffixPrep(string1, string2, out len1, out len2, out start);
             if (len1 == 0) return 1.0;
 
-            return Match.DamerauOSA.InternalDamLevOSA(string1, string2, len1, len2, start, new int[len2], new int[len2])
+            return Match.DamerauOSA.Distance(string1, string2, len1, len2, start, new int[len2], new int[len2])
                 .ToSimilarity(string2.Length);
         }
 
@@ -117,10 +117,10 @@ namespace SoftWx.Match {
             if (len1 == 0) return 1.0;
 
             if (iMaxDistance < len2) {
-                return Match.DamerauOSA.InternalDamLevOSA(string1, string2, len1, len2, start, iMaxDistance, new int[len2], new int[len2])
+                return Match.DamerauOSA.Distance(string1, string2, len1, len2, start, iMaxDistance, new int[len2], new int[len2])
                     .ToSimilarity(string2.Length);
             }
-            return Match.DamerauOSA.InternalDamLevOSA(string1, string2, len1, len2, start, new int[len2], new int[len2])
+            return Match.DamerauOSA.Distance(string1, string2, len1, len2, start, new int[len2], new int[len2])
                 .ToSimilarity(string2.Length);
         }
     }

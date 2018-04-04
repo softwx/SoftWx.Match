@@ -82,7 +82,7 @@ namespace SoftWx.Match {
                 this.baseChar1Costs = new int[len2];
                 this.basePrevChar1Costs = new int[len2];
             }
-            return InternalDamLevOSA(string1, string2, len1, len2, start, this.baseChar1Costs, this.basePrevChar1Costs);
+            return Distance(string1, string2, len1, len2, start, this.baseChar1Costs, this.basePrevChar1Costs);
         }
 
         /// <summary>Compute and return the Damerau-Levenshtein optimal string
@@ -116,9 +116,9 @@ namespace SoftWx.Match {
                 this.basePrevChar1Costs = new int[len2];
             }
             if (iMaxDistance < len2) {
-                return InternalDamLevOSA(string1, string2, len1, len2, start, iMaxDistance, this.baseChar1Costs, this.basePrevChar1Costs);
+                return Distance(string1, string2, len1, len2, start, iMaxDistance, this.baseChar1Costs, this.basePrevChar1Costs);
             }
-            return InternalDamLevOSA(string1, string2, len1, len2, start, this.baseChar1Costs, this.basePrevChar1Costs);
+            return Distance(string1, string2, len1, len2, start, this.baseChar1Costs, this.basePrevChar1Costs);
         }
 
         /// <summary>Return Damerau-Levenshtein optimal string alignment similarity
@@ -144,7 +144,7 @@ namespace SoftWx.Match {
                 this.baseChar1Costs = new int[len2];
                 this.basePrevChar1Costs = new int[len2];
             }
-            return InternalDamLevOSA(string1, string2, len1, len2, start, this.baseChar1Costs, this.basePrevChar1Costs)
+            return Distance(string1, string2, len1, len2, start, this.baseChar1Costs, this.basePrevChar1Costs)
                 .ToSimilarity(string2.Length);
         }
 
@@ -179,44 +179,45 @@ namespace SoftWx.Match {
                 this.basePrevChar1Costs = new int[len2];
             }
             if (iMaxDistance < len2) {
-                return InternalDamLevOSA(string1, string2, len1, len2, start, iMaxDistance, this.baseChar1Costs, this.basePrevChar1Costs)
+                return Distance(string1, string2, len1, len2, start, iMaxDistance, this.baseChar1Costs, this.basePrevChar1Costs)
                     .ToSimilarity(string2.Length);
             }
-            return InternalDamLevOSA(string1, string2, len1, len2, start, this.baseChar1Costs, this.basePrevChar1Costs)
+            return Distance(string1, string2, len1, len2, start, this.baseChar1Costs, this.basePrevChar1Costs)
                 .ToSimilarity(string2.Length);
         }
 
         /// <summary>Internal implementation of the core Damerau-Levenshtein, optimal string alignment algorithm.</summary>
         /// <remarks>https://github.com/softwx/SoftWx.Match</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static int InternalDamLevOSA(string string1, string string2, int len1, int len2, int start, int[] char1Costs, int[] prevChar1Costs) {
+        internal static int Distance(string string1, string string2, int len1, int len2, int start, int[] char1Costs, int[] prevChar1Costs) {
             int j;
             for (j = 0; j < len2;) char1Costs[j] = ++j;
-            char char1 = string1[0];
+            char char1 = ' ';
             int currentCost = 0;
-            for (int i = 0; i < len1; i++) {
+            for (int i = 0; i < len1; ++i) {
                 char prevChar1 = char1;
-                char1 = string1[i + start];
-                char char2 = string2[0];
+                char1 = string1[start + i];
+                char char2 = ' ';
                 int leftCharCost, aboveCharCost;
                 leftCharCost = aboveCharCost = i;
                 int nextTransCost = 0;
-                for (j = 0; j < len2; j++) {
+                for (j = 0; j < len2; ++j) {
                     int thisTransCost = nextTransCost;
                     nextTransCost = prevChar1Costs[j];
                     prevChar1Costs[j] = currentCost = leftCharCost; // cost of diagonal (substitution)
                     leftCharCost = char1Costs[j];    // left now equals current cost (which will be diagonal at next iteration)
                     char prevChar2 = char2;
-                    char2 = string2[j + start];
+                    char2 = string2[start + j];
                     if (char1 != char2) {
                         //substitution if neither of two conditions below
                         if (aboveCharCost < currentCost) currentCost = aboveCharCost; // deletion
                         if (leftCharCost < currentCost) currentCost = leftCharCost;   // insertion
-                        currentCost++;
+                        ++currentCost;
                         if ((i != 0) && (j != 0)
                             && (char1 == prevChar2)
-                            && (prevChar1 == char2)) {
-                            if (++thisTransCost < currentCost) currentCost = thisTransCost; // transposition
+                            && (prevChar1 == char2)
+                            && (thisTransCost + 1 < currentCost)) { 
+                            currentCost = thisTransCost + 1; // transposition
                         }
                     }
                     char1Costs[j] = aboveCharCost = currentCost;
@@ -228,7 +229,7 @@ namespace SoftWx.Match {
         /// <summary>Internal implementation of the core Damerau-Levenshtein, optimal string alignment algorithm
         /// that accepts a maxDistance.</summary>
         /// <remarks>https://github.com/softwx/SoftWx.Match</remarks>
-        internal static int InternalDamLevOSA(string string1, string string2, int len1, int len2, int start, int maxDistance, int[] char1Costs, int[] prevChar1Costs) {
+        internal static int Distance(string string1, string string2, int len1, int len2, int start, int maxDistance, int[] char1Costs, int[] prevChar1Costs) {
 #if DEBUG
             if (len2 < maxDistance) throw new ArgumentException();
             if (len2-len1 > maxDistance) throw new ArgumentException();
@@ -240,12 +241,12 @@ namespace SoftWx.Match {
             int jStartOffset = maxDistance - lenDiff;
             int jStart = 0;
             int jEnd = maxDistance;
-            char char1 = string1[0];
+            char char1 = ' ';
             int currentCost = 0;
-            for (i = 0; i < len1; i++) {
+            for (i = 0; i < len1; ++i) {
                 char prevChar1 = char1;
                 char1 = string1[start + i];
-                char char2 = string2[0];
+                char char2 = ' ';
                 int leftCharCost, aboveCharCost;
                 leftCharCost = aboveCharCost = i;
                 int nextTransCost = 0;
@@ -253,22 +254,23 @@ namespace SoftWx.Match {
                 // and the upper left diagonal + maxDistance cells (upper left is i)
                 jStart += (i > jStartOffset) ? 1 : 0;
                 jEnd += (jEnd < len2) ? 1 : 0;
-                for (j = jStart; j < jEnd; j++) {
+                for (j = jStart; j < jEnd; ++j) {
                     int thisTransCost = nextTransCost;
                     nextTransCost = prevChar1Costs[j];
                     prevChar1Costs[j] = currentCost = leftCharCost; // cost on diagonal (substitution)
                     leftCharCost = char1Costs[j];     // left now equals current cost (which will be diagonal at next iteration)
                     char prevChar2 = char2;
-                    char2 = string2[j + start];
+                    char2 = string2[start + j];
                     if (char1 != char2) {
                         // substitution if neither of two conditions below
                         if (aboveCharCost < currentCost) currentCost = aboveCharCost; // deletion
                         if (leftCharCost < currentCost) currentCost = leftCharCost;   // insertion
-                        currentCost++;
+                        ++currentCost;
                         if ((i != 0) && (j != 0)
                             && (char1 == prevChar2)
-                            && (prevChar1 == char2)) {
-                            if (++thisTransCost < currentCost) currentCost = thisTransCost; // transposition
+                            && (prevChar1 == char2)
+                            && (thisTransCost + 1 < currentCost)) {
+                            currentCost = thisTransCost + 1; // transposition
                         }
                     }
                     char1Costs[j] = aboveCharCost = currentCost;

@@ -7,7 +7,7 @@
     <Authors>Steve Hatchett</Authors>
     <Company>SoftWx, Inc.</Company>
     <Description>Library (.Net Standard 1.0) to support text and person name matching.
-Currently contains Levenshtein and Damerau-Levenshtein (optimal string alignment version) edit distance and normalized similarity functions optimized for speed and reduced memory consumption. There are also versions of the functions that accept a maximum desired distance or minimum desired similarity, which can result in very significantly faster speeds, particularly for long strings. This is one of the faster C# implementations available (possibly the fastest for non-trivial strings). See the associated GitHub project for more detail.
+Currently contains Levenshtein and Damerau-Levenshtein (optimal string alignment version) edit distance and normalized similarity functions optimized for speed and reduced memory consumption. There are also versions of the functions that accept a maximum desired distance or minimum desired similarity, which can result in significantly faster speeds, particularly for long strings. This is one of the faster C# implementations available (possibly the fastest for non-trivial strings). See the associated GitHub project for more detail.
 MIT License</Description>
     <Copyright>Copyright ©  2015-2018 SoftWx, Inc.</Copyright>
     <PackageLicenseUrl>https://github.com/softwx/SoftWx.Match/blob/master/LICENSE</PackageLicenseUrl>

@@ -22,7 +22,7 @@ namespace SoftWx.Match {
     /// Also see http://en.wikipedia.org/wiki/Levenshtein_distance for general information.
     /// The methods in this class are not threadsafe. Use the static versions in the Distance
     /// class if that is required.</remarks>
-    public class Levenshtein : IDistance, ISimilarity{
+    public class Levenshtein : IDistance, ISimilarity {
         private int[] baseChar1Costs;
 
         /// <summary>Create a new instance of Levenshtein.</summary>
@@ -60,7 +60,7 @@ namespace SoftWx.Match {
             Helpers.PrefixSuffixPrep(string1, string2, out len1, out len2, out start);
             if (len1 == 0) return len2;
 
-            return InternalLevenshtein(string1, string2, len1, len2, start,
+            return Distance(string1, string2, len1, len2, start,
                 (this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2]));
         }
 
@@ -90,10 +90,10 @@ namespace SoftWx.Match {
             if (len1 == 0) return (len2 <= iMaxDistance) ? len2 : -1;
 
             if (iMaxDistance < len2) {
-                return InternalLevenshtein(string1, string2, len1, len2, start, iMaxDistance,
+                return Distance(string1, string2, len1, len2, start, iMaxDistance,
                     (this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2]));
             }
-            return InternalLevenshtein(string1, string2, len1, len2, start,
+            return Distance(string1, string2, len1, len2, start,
                 (this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2]));
         }
 
@@ -116,7 +116,7 @@ namespace SoftWx.Match {
             Helpers.PrefixSuffixPrep(string1, string2, out len1, out len2, out start);
             if (len1 == 0) return 1.0;
 
-            return InternalLevenshtein(string1, string2, len1, len2, start,
+            return Distance(string1, string2, len1, len2, start,
                     (this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2]))
                     .ToSimilarity(string2.Length);
         }
@@ -149,11 +149,11 @@ namespace SoftWx.Match {
             if (len1 == 0) return 1.0;
 
             if (iMaxDistance < len2) {
-                return InternalLevenshtein(string1, string2, len1, len2, start, iMaxDistance,
+                return Distance(string1, string2, len1, len2, start, iMaxDistance,
                         (this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2]))
                         .ToSimilarity(string2.Length);
             }
-            return InternalLevenshtein(string1, string2, len1, len2, start,
+            return Distance(string1, string2, len1, len2, start,
                     (this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2]))
                     .ToSimilarity(string2.Length);
         }
@@ -161,29 +161,50 @@ namespace SoftWx.Match {
         /// <summary>Internal implementation of the core Levenshtein algorithm.</summary>
         /// <remarks>https://github.com/softwx/SoftWx.Match</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static int InternalLevenshtein(string string1, string string2, int len1, int len2, int start, int[] char1Costs) {
+        internal static int Distance(string string1, string string2, int len1, int len2, int start, int[] char1Costs) {
             for (int j = 0; j < len2;) char1Costs[j] = ++j;
             int currentCharCost = 0;
-            for (int i = 0; i < len1; ++i) {
-                char char1 = string1[i + start];
-                int leftCharCost, aboveCharCost;
-                leftCharCost = aboveCharCost = i;
-                for (int j = 0; j < len2; ++j) {
-                    currentCharCost = leftCharCost; // cost on diagonal (substitution)
-                    leftCharCost = char1Costs[j];
-                    if (string2[start + j] != char1) {
-                        // substitution if neither of two conditions below
-                        if (aboveCharCost < currentCharCost) currentCharCost = aboveCharCost; // deletion
-                        if (leftCharCost < currentCharCost) currentCharCost = leftCharCost; // insertion
-                        ++currentCharCost;
+            if (start == 0) {
+                for (int i = 0; i < len1; ++i) {
+                    int leftCharCost, aboveCharCost;
+                    leftCharCost = aboveCharCost = i;
+                    char char1 = string1[i];
+                    for (int j = 0; j < len2; ++j) {
+                        currentCharCost = leftCharCost; // cost on diagonal (substitution)
+                        leftCharCost = char1Costs[j];
+                        if (string2[j] != char1) {
+                            // substitution if neither of two conditions below
+                            if (aboveCharCost < currentCharCost) currentCharCost = aboveCharCost; // deletion
+                            if (leftCharCost < currentCharCost) currentCharCost = leftCharCost; // insertion
+                            ++currentCharCost;
+                        }
+                        char1Costs[j] = aboveCharCost = currentCharCost;
                     }
-                    char1Costs[j] = aboveCharCost = currentCharCost;
+                }
+            } else {
+                for (int i = 0; i < len1; ++i) {
+                    int leftCharCost, aboveCharCost;
+                    leftCharCost = aboveCharCost = i;
+                    char char1 = string1[start + i];
+                    for (int j = 0; j < len2; ++j) {
+                        currentCharCost = leftCharCost; // cost on diagonal (substitution)
+                        leftCharCost = char1Costs[j];
+                        if (string2[start + j] != char1) {
+                            // substitution if neither of two conditions below
+                            if (aboveCharCost < currentCharCost) currentCharCost = aboveCharCost; // deletion
+                            if (leftCharCost < currentCharCost) currentCharCost = leftCharCost; // insertion
+                            ++currentCharCost;
+                        }
+                        char1Costs[j] = aboveCharCost = currentCharCost;
+                    }
                 }
             }
             return currentCharCost;
         }
+
+
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        //internal static int InternalLevenshteinExperiment(string string1, string string2, int len1, int len2, int start, int[] char1Costs) {
+        //internal static int DistanceExperiment(string string1, string string2, int len1, int len2, int start, int[] char1Costs) {
         //    if (char1Costs[len2-1] > -len2) for (int j = 0; j < len2; ++j) char1Costs[j] = 0;
         //    int currentCharCost = 0;
         //    for (int i = 0; i < len1; ++i) {
@@ -207,39 +228,64 @@ namespace SoftWx.Match {
 
         /// <summary>Internal implementation of the core Levenshtein algorithm that accepts a maxDistance.</summary>
         /// <remarks>https://github.com/softwx/SoftWx.Match</remarks>
-        internal static int InternalLevenshtein(string string1, string string2, int len1, int len2, int start, int maxDistance, int[] v0) {
+        internal static int Distance(string string1, string string2, int len1, int len2, int start, int maxDistance, int[] char1Costs) {
+//            if (maxDistance >= len2) return Distance(string1, string2, len1, len2, start, char1Costs);
 #if DEBUG
                     if (len2 < maxDistance) throw new ArgumentException();
                     if (len2-len1 > maxDistance) throw new ArgumentException();
 #endif
             int i, j;
-            for (j = 0; j < maxDistance;) v0[j] = ++j;
-            for (; j < len2;) v0[j++] = maxDistance + 1;
+            for (j = 0; j < maxDistance;) char1Costs[j] = ++j;
+            for (; j < len2;) char1Costs[j++] = maxDistance + 1;
             int lenDiff = len2 - len1;
             int jStartOffset = maxDistance - lenDiff;
             int jStart = 0;
             int jEnd = maxDistance;
             int currentCost = 0;
-            for (i = 0; i < len1; ++i) {
-                char char1 = string1[start + i];
-                int prevChar1Cost, aboveCharCost;
-                prevChar1Cost = aboveCharCost = i;
-                // no need to look beyond window of lower right diagonal - maxDistance cells (lower right diag is i - lenDiff)
-                // and the upper left diagonal + maxDistance cells (upper left is i)
-                jStart += (i > jStartOffset) ? 1 : 0;
-                jEnd += (jEnd < len2) ? 1 : 0;
-                for (j = jStart; j < jEnd; ++j) {
-                    currentCost = prevChar1Cost; // cost on diagonal (substitution)
-                    prevChar1Cost = v0[j];
-                    if (string2[start + j] != char1) {
-                        // substitution if neither of two conditions below
-                        if (aboveCharCost < currentCost) currentCost = aboveCharCost; // deletion
-                        if (prevChar1Cost < currentCost) currentCost = prevChar1Cost;   // insertion
-                        ++currentCost;
+            if (start == 0) {
+                for (i = 0; i < len1; ++i) {
+                    char char1 = string1[i];
+                    int prevChar1Cost, aboveCharCost;
+                    prevChar1Cost = aboveCharCost = i;
+                    // no need to look beyond window of lower right diagonal - maxDistance cells (lower right diag is i - lenDiff)
+                    // and the upper left diagonal + maxDistance cells (upper left is i)
+                    jStart += (i > jStartOffset) ? 1 : 0;
+                    jEnd += (jEnd < len2) ? 1 : 0;
+                    for (j = jStart; j < jEnd; ++j) {
+                        currentCost = prevChar1Cost; // cost on diagonal (substitution)
+                        prevChar1Cost = char1Costs[j];
+                        if (string2[j] != char1) {
+                            // substitution if neither of two conditions below
+                            if (aboveCharCost < currentCost) currentCost = aboveCharCost; // deletion
+                            if (prevChar1Cost < currentCost) currentCost = prevChar1Cost;   // insertion
+                            ++currentCost;
+                        }
+                        char1Costs[j] = aboveCharCost = currentCost;
                     }
-                    v0[j] = aboveCharCost = currentCost;
+                    if (char1Costs[i + lenDiff] > maxDistance) return -1;
                 }
-                if (v0[i + lenDiff] > maxDistance) return -1;
+            } else {
+                for (i = 0; i < len1; ++i) {
+                    char char1 = string1[start + i];
+                    int prevChar1Cost, aboveCharCost;
+                    prevChar1Cost = aboveCharCost = i;
+                    // no need to look beyond window of lower right diagonal - maxDistance cells (lower right diag is i - lenDiff)
+                    // and the upper left diagonal + maxDistance cells (upper left is i)
+                    jStart += (i > jStartOffset) ? 1 : 0;
+                    jEnd += (jEnd < len2) ? 1 : 0;
+                    for (j = jStart; j < jEnd; ++j) {
+                        currentCost = prevChar1Cost; // cost on diagonal (substitution)
+                        prevChar1Cost = char1Costs[j];
+                        if (string2[start + j] != char1) {
+                            // substitution if neither of two conditions below
+                            if (aboveCharCost < currentCost) currentCost = aboveCharCost; // deletion
+                            if (prevChar1Cost < currentCost) currentCost = prevChar1Cost;   // insertion
+                            ++currentCost;
+                        }
+                        char1Costs[j] = aboveCharCost = currentCost;
+                    }
+                    if (char1Costs[i + lenDiff] > maxDistance) return -1;
+                }
             }
             return (currentCost <= maxDistance) ? currentCost : -1;
         }

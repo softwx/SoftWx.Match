@@ -39,7 +39,7 @@ namespace SoftWx.Match {
             Helpers.PrefixSuffixPrep(string1, string2, out len1, out len2, out start);
             if (len1 == 0) return len2;
 
-            return Match.Levenshtein.InternalLevenshtein(string1, string2, len1, len2, start, new int[len2]);
+            return Match.Levenshtein.Distance(string1, string2, len1, len2, start, new int[len2]);
         }
 
         /// <summary>Compute and return the Levenshtein edit distance between two strings.</summary>
@@ -66,9 +66,9 @@ namespace SoftWx.Match {
             if (len1 == 0) return (len2 <= maxDistance) ? len2 : -1;
 
             if (maxDistance < len2) {
-                return Match.Levenshtein.InternalLevenshtein(string1, string2, len1, len2, start, maxDistance, new int[len2]);
+                return Match.Levenshtein.Distance(string1, string2, len1, len2, start, maxDistance, new int[len2]);
             }
-            return Match.Levenshtein.InternalLevenshtein(string1, string2, len1, len2, start, new int[len2]);
+            return Match.Levenshtein.Distance(string1, string2, len1, len2, start, new int[len2]);
         }
 
         /// <summary>Compute and return the Damerau-Levenshtein optimal string
@@ -92,7 +92,7 @@ namespace SoftWx.Match {
             Helpers.PrefixSuffixPrep(string1, string2, out len1, out len2, out start);
             if (len1 == 0) return len2;
 
-            return Match.DamerauOSA.InternalDamLevOSA(string1, string2, len1, len2, start, new int[len2], new int[len2]);
+            return Match.DamerauOSA.Distance(string1, string2, len1, len2, start, new int[len2], new int[len2]);
         }
 
         /// <summary>Compute and return the Damerau-Levenshtein optimal string
@@ -120,9 +120,9 @@ namespace SoftWx.Match {
             if (len1 == 0) return (len2 <= maxDistance) ? len2 : -1;
 
             if (maxDistance < len2) {
-                return Match.DamerauOSA.InternalDamLevOSA(string1, string2, len1, len2, start, maxDistance, new int[len2], new int[len2]);
+                return Match.DamerauOSA.Distance(string1, string2, len1, len2, start, maxDistance, new int[len2], new int[len2]);
             }
-            return Match.DamerauOSA.InternalDamLevOSA(string1, string2, len1, len2, start, new int[len2], new int[len2]);
+            return Match.DamerauOSA.Distance(string1, string2, len1, len2, start, new int[len2], new int[len2]);
         }
     }
 }
