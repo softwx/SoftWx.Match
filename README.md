@@ -12,7 +12,7 @@ Beginning with version 2, I'll be fleshing out the library with additional funct
 
 In many cases, functionality is exposed as methods in instantiable classes, and also as static class methods.
 
-Immediate future plans are first to add similarity functions for Levenshtein and Damerau-Levenshtein. After that, I'll be adding some functionality specifically for person name matching, including a novel phonetic algorithm.
+Immediate future plans are first ~~to add similarity functions for Levenshtein and Damerau-Levenshtein~~ (done). After that, I'll be adding some functionality specifically for person name matching, including a novel phonetic algorithm.
 
 ## Distance
 This includes classes that implement an IDistance interface by exposing methods for computing the distance between two strings.
@@ -43,7 +43,7 @@ var dist = Distance.DamerauOSA("flintstone", "hanson");
 dist = Distance.DamerauOSA("flintstone", "hanson", 2);
 ```
 ## Similarity
-This includes classes that implement an ISimilarity interface by exposing methods for computing a nromalized measure of the similarity of two strings. Similarity results are a double value from 0 to 1.0, where 0 is no similarity at all, and 1.0 is equivalent strings.
+This includes classes that implement an ISimilarity interface by exposing methods for computing a normalized measure of the similarity of two strings. Similarity results are a double value from 0 to 1.0, where 0 is no similarity at all, and 1.0 is equivalent strings.
 ### Levenshtein
 This class provides methods that compute a normalized similarity value based on the Levenshtein edit distance between two strings. The similarity formula is 1 - (edit distance / length of longer string).
 ```
@@ -57,7 +57,22 @@ var sim = ed.Similarity("flintstone", "hanson", .75);
 var sim = Similarity.Levenshtein("flintstone", "hanson");
 sim = Similarity.Levenshtein("flintstone", "hanson", .75);
 ```
+### Damerau-Levenshtein OSA
+This class provides methods that compute a normalized similarity value based on the Damerau-Levenshtein optimal string alignment (OSA) edit distance between two strings. The similarity formula is 1 - (edit distance / length of longer string).
+```
+// instantiated class version
+var ed = new DamerauOSA();
+var sim = ed.Similarity("flintstone", "hanson");
+// you can also specify the min similarity you care about, which can result in significant speed improvement
+var sim = ed.Similarity("flintstone", "hanson", .75);
+
+// static class version
+var sim = Similarity.DamerauOSA("flintstone", "hanson");
+sim = Similarity.DamerauOSA("flintstone", "hanson", .75);
+```
 #### Release Notes
+**v2.0.3** Added DamerauOSA similarity functions, minor speed improvements to Levenshtein distance functions
+
 **v2.0.2** Corrected some comments, added Levenshtein similarity functions, added xml docs
  
 **v2.0.1** Fixed error in README, Fixed bug in DEBUG conditional code, added detail to nuspec file
