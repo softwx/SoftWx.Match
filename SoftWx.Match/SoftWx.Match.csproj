@@ -19,7 +19,15 @@ MIT License</Description>
 v2.0.2 Corrected some comments, added Levenshtein similarity functions, added xml docs
 v2.0.0 Initial Nuget version</PackageReleaseNotes>
     <PackageTags>levenshtein damerau matching fuzzy softwx</PackageTags>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
+  </ItemGroup>
+
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
