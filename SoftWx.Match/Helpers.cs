@@ -2,6 +2,7 @@
 // Released under the MIT License the text of which appears at the end of this file.
 // <authors> Steve Hatchett
 
+using System;
 using System.Runtime.CompilerServices;
 
 namespace SoftWx.Match {
@@ -26,6 +27,26 @@ namespace SoftWx.Match {
         public static void PrefixSuffixPrep(string string1, string string2, out int len1, out int len2, out int start) {
             len2 = string2.Length;
             len1 = string1.Length; // this is also the minimum length of the two strings
+#if NET8_0_OR_GREATER
+            start = 0;
+            if (len1 != 0 && string1[0] == string2[0]) {
+                start = string1.AsSpan().CommonPrefixLength(string2);
+                if (start == len1) {
+                    len1 = 0;
+                    len2 -= start;
+                    return;
+                }
+            }
+            // suffix common to both strings can be ignored
+            while (len1 > start && string1[len1 - 1] == string2[len2 - 1]) {
+                len1--;
+                len2--;
+            }
+            if (start != 0) {
+                len2 -= start; // length of the part excluding common prefix and suffix
+                len1 -= start;
+            }
+#else
             // suffix common to both strings can be ignored
             while (len1 != 0 && string1[len1 - 1] == string2[len2 - 1]) {
                 len1--;
@@ -38,6 +59,25 @@ namespace SoftWx.Match {
                 len2 -= start; // length of the part excluding common prefix and suffix
                 len1 -= start;
             }
+#endif
+        }
+
+        /// <summary>Computes exact Levenshtein / DamerauOSA edit distance when len1 == 1 after PrefixSuffixPrep.</summary>
+        /// <remarks>Assumes string1[start] != string2[start] and string1[start] != string2[start + len2 - 1].</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int SingleCharDistance(string string1, string string2, int len2, int start) {
+            if (len2 <= 2) return len2;
+#if NET8_0_OR_GREATER
+            return (string2.AsSpan(start + 1, len2 - 2).IndexOf(string1[start]) >= 0) ? len2 - 1 : len2;
+#else
+            return (string2.IndexOf(string1[start], start + 1, len2 - 2) >= 0) ? len2 - 1 : len2;
+#endif
+        }
+
+        /// <summary>Returns true if the remaining trimmed substrings represent a single adjacent transposition.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsSingleTransposition(string string1, string string2, int len1, int len2, int start) {
+            return len1 == 2 && len2 == 2 && string1[start] == string2[start + 1] && string1[start + 1] == string2[start];
         }
 
         /// <summary>Calculate a similarity measure from an edit distance.</summary>

@@ -41,6 +41,7 @@ namespace SoftWx.Match {
             // identify common suffix and/or prefix that can be ignored
             Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
             if (len1 == 0) return len2;
+            if (len1 == 1) return Helpers.SingleCharDistance(string1, string2, len2, start);
 
 #if NET8_0_OR_GREATER
             return Match.Levenshtein.Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2));
@@ -70,6 +71,11 @@ namespace SoftWx.Match {
             // identify common suffix and/or prefix that can be ignored
             Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
             if (len1 == 0) return (len2 <= maxDistance) ? len2 : -1;
+            if (maxDistance == 1) return (len2 == 1) ? 1 : -1;
+            if (len1 == 1) {
+                int dist = Helpers.SingleCharDistance(string1, string2, len2, start);
+                return (dist <= maxDistance) ? dist : -1;
+            }
 
 #if NET8_0_OR_GREATER
             if (maxDistance < len2) {
@@ -103,6 +109,7 @@ namespace SoftWx.Match {
             // identify common suffix and/or prefix that can be ignored
             Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
             if (len1 == 0) return len2;
+            if (len1 == 1) return Helpers.SingleCharDistance(string1, string2, len2, start);
 
 #if NET8_0_OR_GREATER
             return Match.DamerauOSA.Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2));
@@ -133,6 +140,13 @@ namespace SoftWx.Match {
             // identify common suffix and/or prefix that can be ignored
             Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
             if (len1 == 0) return (len2 <= maxDistance) ? len2 : -1;
+            if (maxDistance == 1) {
+                return (len2 == 1 || Helpers.IsSingleTransposition(string1, string2, len1, len2, start)) ? 1 : -1;
+            }
+            if (len1 == 1) {
+                int dist = Helpers.SingleCharDistance(string1, string2, len2, start);
+                return (dist <= maxDistance) ? dist : -1;
+            }
 
 #if NET8_0_OR_GREATER
             if (maxDistance < len2) {

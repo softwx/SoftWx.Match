@@ -90,6 +90,7 @@ namespace SoftWx.Match {
             // identify common suffix and/or prefix that can be ignored
             Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
             if (len1 == 0) return len2;
+            if (len1 == 1) return Helpers.SingleCharDistance(string1, string2, len2, start);
 
             if (len2 > this.baseChar1Costs.Length) {
                 this.baseChar1Costs = new int[len2];
@@ -128,6 +129,13 @@ namespace SoftWx.Match {
             // identify common suffix and/or prefix that can be ignored
             Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
             if (len1 == 0) return (len2 <= iMaxDistance) ? len2 : -1;
+            if (iMaxDistance == 1) {
+                return (len2 == 1 || Helpers.IsSingleTransposition(string1, string2, len1, len2, start)) ? 1 : -1;
+            }
+            if (len1 == 1) {
+                int dist = Helpers.SingleCharDistance(string1, string2, len2, start);
+                return (dist <= iMaxDistance) ? dist : -1;
+            }
 
             if (len2 > this.baseChar1Costs.Length) {
                 this.baseChar1Costs = new int[len2];
@@ -163,6 +171,7 @@ namespace SoftWx.Match {
             // identify common suffix and/or prefix that can be ignored
             Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
             if (len1 == 0) return (len2 == 0) ? 1.0 : len2.ToSimilarity(string2.Length);
+            if (len1 == 1) return Helpers.SingleCharDistance(string1, string2, len2, start).ToSimilarity(string2.Length);
 
             if (len2 > this.baseChar1Costs.Length) {
                 this.baseChar1Costs = new int[len2];
@@ -203,6 +212,15 @@ namespace SoftWx.Match {
             // identify common suffix and/or prefix that can be ignored
             Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
             if (len1 == 0) return (len2 == 0) ? 1.0 : len2.ToSimilarity(string2.Length);
+            if (iMaxDistance == 1) {
+                return (len2 == 1 || Helpers.IsSingleTransposition(string1, string2, len1, len2, start))
+                    ? 1.ToSimilarity(string2.Length)
+                    : -1;
+            }
+            if (len1 == 1) {
+                int dist = Helpers.SingleCharDistance(string1, string2, len2, start);
+                return (dist <= iMaxDistance) ? dist.ToSimilarity(string2.Length) : -1;
+            }
 
             if (len2 > this.baseChar1Costs.Length) {
                 this.baseChar1Costs = new int[len2];
