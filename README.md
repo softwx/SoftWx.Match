@@ -19,51 +19,58 @@ This project started as a place to publish code from a series of blog posts on o
 - [Optimizing Levenshtein Algorithm in C#](http://blog.softwx.net/2014/12/optimizing-levenshtein-algorithm-in-c.html)
 - [Optimizing Damerau-Levenshtein in C#](http://blog.softwx.net/2015/01/optimizing-damerau-levenshtein_15.html)
 
-A primary goal of the library is to provide string distance and similarity methods that are optimized for speed and memory efficiency. Functionality is exposed both as instantiable classes (reusing internal buffers for minimal allocations; not thread-safe) and as thread-safe static methods.
+A primary goal of the library is to provide string distance and similarity methods optimized for speed and memory efficiency. Functionality is exposed both as instantiable classes (reusing internal buffers up to 512 chars by default, or a caller-specified `expectedMaxStringLength`; not thread-safe) and as thread-safe static methods.
 
-SoftWx.Match is a highly optimized, 100% safe managed C# implementation of Wagner-Fischer Levenshtein and Damerau-Levenshtein OSA — ideal for short strings (person names, words, identifiers) and bounded `maxDistance` / `minSimilarity` filtering, with zero steady-state allocations on `.NET 8+`. For unbounded edit distance on long strings (or bulk 1-to-many ASCII searches against a fixed query), bit-parallel algorithms such as Myers/Hyyrö are asymptotically faster.
+SoftWx.Match is a 100% safe managed C# implementation of Wagner-Fischer Levenshtein and Damerau-Levenshtein OSA — ideal for short strings (person names, words, identifiers) and bounded `maxDistance` / `minSimilarity` filtering, with zero steady-state allocations on `.NET 8+`. For unbounded edit distance on long strings (or bulk 1-to-many ASCII searches against a fixed query), bit-parallel algorithms such as Myers/Hyyrö are asymptotically faster.
 
 ## Distance
 
-Classes implementing `IDistance` compute the edit distance between two strings (`0` for equivalent strings, positive values as difference increases, or `-1` when exceeding `maxDistance`).
+Classes implementing `IDistance` compute the edit distance between two strings (`0` for equivalent strings, positive values as difference increases, or `-1` when exceeding `maxDistance`). Comparisons are case-sensitive (e.g. `"Fred"` vs. `"fred"` has distance `1`).
 
 ### Levenshtein
 
-Computes the Levenshtein edit distance between two strings.
+Computes the Levenshtein edit distance (insertions, deletions, and substitutions) between two strings or character spans.
 
 ```csharp
 using SoftWx.Match;
 
 // Instantiated class version (reuses internal buffer; not thread-safe)
+// Optional: pass expectedMaxStringLength to pre-size and raise the retained buffer cap
 var ed = new Levenshtein();
-double dist = ed.Distance("flintstone", "hanson");
+double dist = ed.Distance("flintstone", "hanson");        // 6
 // Specify a maxDistance for significant speed improvements
-dist = ed.Distance("flintstone", "hanson", 2);
+dist = ed.Distance("flintstone", "hanson", 2);            // -1 (exceeds maxDistance)
+// ReadOnlySpan<char> overloads (.NET 8+) avoid substring allocations
+dist = ed.Distance("fred flintstone".AsSpan(5), "hanson".AsSpan()); // 6
 
-// Thread-safe static (and string extension) methods
-int staticDist = Distance.Levenshtein("flintstone", "hanson");
-staticDist = Distance.Levenshtein("flintstone", "hanson", 2);
-staticDist = "flintstone".Levenshtein("hanson");
+// Thread-safe static (and string / ReadOnlySpan<char> extension) methods
+int staticDist = Distance.Levenshtein("flintstone", "hanson");      // 6
+staticDist = Distance.Levenshtein("flintstone", "hanson", 2);       // -1
+staticDist = "flintstone".Levenshtein("hanson");                    // 6
+staticDist = "fred flintstone".AsSpan(5).Levenshtein("hanson".AsSpan(), 2); // -1 (.NET 8+)
 ```
 
 ### Damerau-Levenshtein OSA
 
-Computes the Damerau-Levenshtein optimal string alignment (OSA) edit distance between two strings.
+Computes the Damerau-Levenshtein optimal string alignment (OSA) edit distance, which also counts an adjacent character transposition (such as `"to"` → `"ot"`) as a single edit.
 
 ```csharp
 using SoftWx.Match;
 
 // Instantiated class version (reuses internal buffers; not thread-safe)
 var ed = new DamerauOSA();
-double dist = ed.Distance("flintstone", "hanson");
+double dist = ed.Distance("flintstone", "hanson");        // 6
+dist = ed.Distance("flintstone", "flintsotne");           // 1 (adjacent transposition)
 // Specify a maxDistance for significant speed improvements
-dist = ed.Distance("flintstone", "hanson", 2);
+dist = ed.Distance("flintstone", "hanson", 2);            // -1
+// ReadOnlySpan<char> overloads (.NET 8+) avoid substring allocations
+dist = ed.Distance("fred flintstone".AsSpan(5), "flintsotne".AsSpan(), 2); // 1
 
 // Thread-safe static (and string / ReadOnlySpan<char> extension) methods
-int staticDist = Distance.DamerauOSA("flintstone", "hanson");
-staticDist = Distance.DamerauOSA("flintstone", "hanson", 2);
-staticDist = "flintstone".DamerauOSA("hanson");
-staticDist = "flintstone".AsSpan(0, 5).DamerauOSA("hanson".AsSpan()); // .NET 8+ zero-alloc
+int staticDist = Distance.DamerauOSA("flintstone", "hanson");       // 6
+staticDist = Distance.DamerauOSA("flintstone", "flintsotne", 2);    // 1
+staticDist = "flintstone".DamerauOSA("flintsotne");                 // 1
+staticDist = "fred flintstone".AsSpan(5).DamerauOSA("flintsotne".AsSpan()); // 1 (.NET 8+)
 ```
 
 ## Similarity
@@ -75,15 +82,17 @@ Classes implementing `ISimilarity` compute a normalized measure of similarity be
 ```csharp
 using SoftWx.Match;
 
-// Instantiated class version
+// Instantiated class version (not thread-safe)
 var ed = new Levenshtein();
-double sim = ed.Similarity("flintstone", "hanson");
+double sim = ed.Similarity("flintstone", "hanson");       // 0.4
 // Specify a minSimilarity for significant speed improvements
-sim = ed.Similarity("flintstone", "hanson", 0.75);
+sim = ed.Similarity("flintstone", "hanson", 0.75);        // -1 (below minSimilarity)
+sim = ed.Similarity("fred flintstone".AsSpan(5), "hanson".AsSpan()); // 0.4 (.NET 8+)
 
 // Thread-safe static methods
-sim = Similarity.Levenshtein("flintstone", "hanson");
-sim = Similarity.Levenshtein("flintstone", "hanson", 0.75);
+sim = Similarity.Levenshtein("flintstone", "hanson");     // 0.4
+sim = Similarity.Levenshtein("flintstone", "hanson", 0.75); // -1
+sim = Similarity.Levenshtein("fred flintstone".AsSpan(5), "hanson".AsSpan(), 0.4); // 0.4 (.NET 8+)
 ```
 
 ### Damerau-Levenshtein OSA
@@ -91,15 +100,17 @@ sim = Similarity.Levenshtein("flintstone", "hanson", 0.75);
 ```csharp
 using SoftWx.Match;
 
-// Instantiated class version
+// Instantiated class version (not thread-safe)
 var ed = new DamerauOSA();
-double sim = ed.Similarity("flintstone", "hanson");
+double sim = ed.Similarity("flintstone", "flintsotne");   // 0.9
 // Specify a minSimilarity for significant speed improvements
-sim = ed.Similarity("flintstone", "hanson", 0.75);
+sim = ed.Similarity("flintstone", "flintsotne", 0.75);    // 0.9
+sim = ed.Similarity("fred flintstone".AsSpan(5), "flintsotne".AsSpan()); // 0.9 (.NET 8+)
 
 // Thread-safe static methods
-sim = Similarity.DamerauOSA("flintstone", "hanson");
-sim = Similarity.DamerauOSA("flintstone", "hanson", 0.75);
+sim = Similarity.DamerauOSA("flintstone", "flintsotne");  // 0.9
+sim = Similarity.DamerauOSA("flintstone", "hanson", 0.75); // -1
+sim = Similarity.DamerauOSA("fred flintstone".AsSpan(5), "flintsotne".AsSpan(), 0.75); // 0.9 (.NET 8+)
 ```
 
 ## Benchmarks
