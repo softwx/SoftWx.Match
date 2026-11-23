@@ -115,7 +115,7 @@ dotnet run --project SoftWx.Match.Benchmark -c Release
 **v3.0.0**
 - Multi-targeted `netstandard2.0`, `net8.0`, and `net10.0` (dropped obsolete `netstandard1.0`)
 - Enabled nullable reference types, trimming/NativeAOT compatibility, .NET analyzers, and built-in Source Link with `.snupkg` symbols
-- Added `ReadOnlySpan<char>` overloads (`.NET 8+`), zero-allocation static methods (`stackalloc`/`ArrayPool`), lazy `maxDistance` initialization, SIMD `CommonPrefixLength`, and `O(1)` fast paths
+- Added `ReadOnlySpan<char>` overloads (`.NET 8+`), zero-allocation static methods (`stackalloc`/`ArrayPool` on `.NET 8+`, capped thread-local cache on `netstandard2.0`), capped instance buffer retention, lazy `maxDistance` initialization, SIMD `CommonPrefixLength`, and `O(1)` fast paths
 - Fixed `Similarity` returning `1.0` when one string was a prefix or suffix of the other (e.g. `""` vs `"abc"`, `"a"` vs `"ab"`)
 - Fixed inverted `null` handling in `Similarity.DamerauOSA` and `Helpers.NullSimilarityResults`
 - Fixed fractional and `NaN` `maxDistance` handling in `Levenshtein.Distance` and `DamerauOSA.Distance`

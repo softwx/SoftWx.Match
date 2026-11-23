@@ -37,8 +37,11 @@ jobs:
       - name: Build
         run: dotnet build SoftWx.Match.sln --configuration Release --no-restore
 
-      - name: Test
+      - name: Test (.NET 8 & .NET 10)
         run: dotnet test SoftWx.Match.Test/SoftWx.Match.Test.csproj --configuration Release --no-build --verbosity normal
+
+      - name: Test (netstandard2.0 target)
+        run: dotnet test SoftWx.Match.Test/SoftWx.Match.Test.csproj --configuration Release -f net8.0 -p:TestNetStandard=true --verbosity normal
 
       - name: Pack
         run: dotnet pack SoftWx.Match/SoftWx.Match.csproj --configuration Release --no-build --output ./artifacts

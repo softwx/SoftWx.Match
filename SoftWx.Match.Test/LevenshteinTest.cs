@@ -339,6 +339,7 @@ namespace SoftWx.Match.Test {
             });
         }
 
+#if !TEST_NETSTANDARD
         [TestMethod]
         public void LevSpanOverloadsShouldMatchStringOverloads() {
             var ed = new Levenshtein();
@@ -370,6 +371,7 @@ namespace SoftWx.Match.Test {
             Assert.ThrowsException<ArgumentOutOfRangeException>(() => ed.Similarity("a".AsSpan(), "b".AsSpan(), -0.1));
             Assert.ThrowsException<ArgumentOutOfRangeException>(() => Similarity.Levenshtein("a".AsSpan(), "b".AsSpan(), double.NaN));
         }
+#endif
 
         [TestMethod]
         public void LevShouldHandleStringsExceedingMaxCachedBufferLength() {

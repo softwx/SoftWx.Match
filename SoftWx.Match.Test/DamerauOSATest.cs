@@ -341,6 +341,7 @@ namespace SoftWx.Match.Test {
             });
         }
 
+#if !TEST_NETSTANDARD
         [TestMethod]
         public void DamerauOSASpanOverloadsShouldMatchStringOverloads() {
             var ed = new DamerauOSA();
@@ -372,6 +373,7 @@ namespace SoftWx.Match.Test {
             Assert.ThrowsException<ArgumentOutOfRangeException>(() => ed.Similarity("a".AsSpan(), "b".AsSpan(), 1.1));
             Assert.ThrowsException<ArgumentOutOfRangeException>(() => Similarity.DamerauOSA("a".AsSpan(), "b".AsSpan(), double.NaN));
         }
+#endif
 
         [TestMethod]
         public void DamerauOSAShouldHandleStringsExceedingMaxCachedBufferLength() {
