@@ -21,6 +21,7 @@ namespace SoftWx.Match {
         /// lower than minSimilarity, otherwise, a number between 0 and 1.0 where 0
         /// represents a lack of any notable similarity, and 1 represents equivalent
         /// strings.</returns>
+        /// <exception cref="System.ArgumentOutOfRangeException">Thrown when minSimilarity is NaN or outside the range 0 to 1.0.</exception>
         double Similarity(string? string1, string? string2, double minSimilarity);
     }
 }

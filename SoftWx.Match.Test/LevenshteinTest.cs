@@ -370,6 +370,25 @@ namespace SoftWx.Match.Test {
             Assert.ThrowsException<ArgumentOutOfRangeException>(() => ed.Similarity("a".AsSpan(), "b".AsSpan(), -0.1));
             Assert.ThrowsException<ArgumentOutOfRangeException>(() => Similarity.Levenshtein("a".AsSpan(), "b".AsSpan(), double.NaN));
         }
+
+        [TestMethod]
+        public void LevShouldHandleStringsExceedingMaxCachedBufferLength() {
+            string s1 = "x" + new string('a', 598) + "y";
+            string s2 = "z" + new string('a', 598) + "w";
+
+            var ed = new Levenshtein();
+            Assert.AreEqual(2, ed.Distance(s1, s2));
+            Assert.AreEqual(2, ed.Distance(s1, s2, 2));
+            Assert.AreEqual(-1, ed.Distance(s1, s2, 1));
+            Assert.AreEqual(1.0 - (2.0 / 600), ed.Similarity(s1, s2), 1e-12);
+            // Subsequent short comparisons continue to work cleanly.
+            Assert.AreEqual(6, ed.Distance("flintstone", "hanson"));
+
+            var preSized = new Levenshtein(700);
+            Assert.AreEqual(2, preSized.Distance(s1, s2));
+            Assert.AreEqual(2, Distance.Levenshtein(s1, s2));
+            Assert.AreEqual(2, Distance.Levenshtein(s1, s2, 2));
+        }
     }
 }
 /*

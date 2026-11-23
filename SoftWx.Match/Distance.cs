@@ -11,16 +11,16 @@ namespace SoftWx.Match {
     /// distance between two strings.</summary>
     /// <remarks>The methods are static versions of methods from classes that implement
     /// the IDistance interface. In general (although not necessarily) these static
-    /// methods will be about the same speed or slightly faster than the methods of
-    /// IDistance instantiated classes. On .NET 8 and later, these methods use stack
-    /// allocation and ArrayPool for zero steady-state heap allocations. Note that since
-    /// the methods in this class are not implementations of the IDistance interface,
-    /// some argument types and return types may differ from the interface. The types
-    /// will be those that match most closely to the nature of the algorithm. For example,
-    /// the Levenshtein methods take an int maxDistance and return an int value instead
-    /// of double since it only deals with integral values.
-    /// The methods in this class also can be used as string extension methods as in this
-    /// example:
+    /// methods will be about the same speed as the methods of IDistance instantiated
+    /// classes. On .NET 8 and later, these methods use stack allocation and ArrayPool
+    /// for zero steady-state heap allocations. Note that since the methods in this class
+    /// are not implementations of the IDistance interface, some argument types and return
+    /// types may differ from the interface. The types will be those that match most closely
+    /// to the nature of the algorithm. For example, the Levenshtein methods take an int
+    /// maxDistance and return an int value instead of double since it only deals with
+    /// integral values.
+    /// The methods in this class also can be used as string (and on .NET 8+, ReadOnlySpan&lt;char&gt;)
+    /// extension methods as in this example:
     ///   <code>var distance = "hello".Levenshtein("goodbye");</code>
     /// </remarks>
     public static class Distance {
@@ -46,7 +46,7 @@ namespace SoftWx.Match {
             if (len1 == 0) return len2;
             if (len1 == 1) return Helpers.SingleCharDistance(string1, string2, len2, start);
 
-            return Match.Levenshtein.Distance(string1, string2, len1, len2, start, new int[len2]);
+            return Match.Levenshtein.DistanceCore(string1, string2, len1, len2, start);
 #endif
         }
 
@@ -81,9 +81,9 @@ namespace SoftWx.Match {
             }
 
             if (maxDistance < len2) {
-                return Match.Levenshtein.Distance(string1, string2, len1, len2, start, maxDistance, new int[len2]);
+                return Match.Levenshtein.DistanceCore(string1, string2, len1, len2, start, maxDistance);
             }
-            return Match.Levenshtein.Distance(string1, string2, len1, len2, start, new int[len2]);
+            return Match.Levenshtein.DistanceCore(string1, string2, len1, len2, start);
 #endif
         }
 
@@ -110,7 +110,7 @@ namespace SoftWx.Match {
             if (len1 == 0) return len2;
             if (len1 == 1) return Helpers.SingleCharDistance(string1, string2, len2, start);
 
-            return Match.DamerauOSA.Distance(string1, string2, len1, len2, start, new int[len2], new int[len2]);
+            return Match.DamerauOSA.DistanceCore(string1, string2, len1, len2, start);
 #endif
         }
 
@@ -148,9 +148,9 @@ namespace SoftWx.Match {
             }
 
             if (maxDistance < len2) {
-                return Match.DamerauOSA.Distance(string1, string2, len1, len2, start, maxDistance, new int[len2], new int[len2]);
+                return Match.DamerauOSA.DistanceCore(string1, string2, len1, len2, start, maxDistance);
             }
-            return Match.DamerauOSA.Distance(string1, string2, len1, len2, start, new int[len2], new int[len2]);
+            return Match.DamerauOSA.DistanceCore(string1, string2, len1, len2, start);
 #endif
         }
 
@@ -197,6 +197,7 @@ namespace SoftWx.Match {
 
             Helpers.PrefixSuffixPrep(ref string1, ref string2);
             if (string1.Length == 0) return (string2.Length <= maxDistance) ? string2.Length : -1;
+            // After PrefixSuffixPrep both ends differ, so distance == 1 iff both trimmed spans have length 1.
             if (maxDistance == 1) return (string2.Length == 1) ? 1 : -1;
             if (string1.Length == 1) {
                 int dist = Helpers.SingleCharDistance(string1, string2);
@@ -253,6 +254,7 @@ namespace SoftWx.Match {
 
             Helpers.PrefixSuffixPrep(ref string1, ref string2);
             if (string1.Length == 0) return (string2.Length <= maxDistance) ? string2.Length : -1;
+            // After PrefixSuffixPrep both ends differ, so distance == 1 iff len2 == 1 or a 2-char transposition.
             if (maxDistance == 1) {
                 return (string2.Length == 1 || Helpers.IsSingleTransposition(string1, string2)) ? 1 : -1;
             }

@@ -372,6 +372,25 @@ namespace SoftWx.Match.Test {
             Assert.ThrowsException<ArgumentOutOfRangeException>(() => ed.Similarity("a".AsSpan(), "b".AsSpan(), 1.1));
             Assert.ThrowsException<ArgumentOutOfRangeException>(() => Similarity.DamerauOSA("a".AsSpan(), "b".AsSpan(), double.NaN));
         }
+
+        [TestMethod]
+        public void DamerauOSAShouldHandleStringsExceedingMaxCachedBufferLength() {
+            string s1 = "x" + new string('a', 598) + "y";
+            string s2 = "z" + new string('a', 598) + "w";
+
+            var ed = new DamerauOSA();
+            Assert.AreEqual(2, ed.Distance(s1, s2));
+            Assert.AreEqual(2, ed.Distance(s1, s2, 2));
+            Assert.AreEqual(-1, ed.Distance(s1, s2, 1));
+            Assert.AreEqual(1.0 - (2.0 / 600), ed.Similarity(s1, s2), 1e-12);
+            // Subsequent short comparisons continue to work cleanly.
+            Assert.AreEqual(1, ed.Distance("1234", "1324"));
+
+            var preSized = new DamerauOSA(700);
+            Assert.AreEqual(2, preSized.Distance(s1, s2));
+            Assert.AreEqual(2, Distance.DamerauOSA(s1, s2));
+            Assert.AreEqual(2, Distance.DamerauOSA(s1, s2, 2));
+        }
     }
 }
 /*

@@ -21,6 +21,8 @@ This project started as a place to publish code from a series of blog posts on o
 
 A primary goal of the library is to provide string distance and similarity methods that are optimized for speed and memory efficiency. Functionality is exposed both as instantiable classes (reusing internal buffers for minimal allocations; not thread-safe) and as thread-safe static methods.
 
+SoftWx.Match is a highly optimized, 100% safe managed C# implementation of Wagner-Fischer Levenshtein and Damerau-Levenshtein OSA — ideal for short strings (person names, words, identifiers) and bounded `maxDistance` / `minSimilarity` filtering, with zero steady-state allocations on `.NET 8+`. For unbounded edit distance on long strings (or bulk 1-to-many ASCII searches against a fixed query), bit-parallel algorithms such as Myers/Hyyrö are asymptotically faster.
+
 ## Distance
 
 Classes implementing `IDistance` compute the edit distance between two strings (`0` for equivalent strings, positive values as difference increases, or `-1` when exceeding `maxDistance`).
