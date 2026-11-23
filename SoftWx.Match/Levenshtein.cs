@@ -214,7 +214,6 @@ namespace SoftWx.Match {
 #endif
             int i, j;
             for (j = 0; j < maxDistance;) char1Costs[j] = ++j;
-            for (; j < len2;) char1Costs[j++] = maxDistance + 1;
             int lenDiff = len2 - len1;
             int jStartOffset = maxDistance - lenDiff;
             int jStart = 0;
@@ -228,7 +227,7 @@ namespace SoftWx.Match {
                     // no need to look beyond window of lower right diagonal - maxDistance cells (lower right diag is i - lenDiff)
                     // and the upper left diagonal + maxDistance cells (upper left is i)
                     jStart += (i > jStartOffset) ? 1 : 0;
-                    jEnd += (jEnd < len2) ? 1 : 0;
+                    if (jEnd < len2) char1Costs[jEnd++] = maxDistance + 1;
                     for (j = jStart; j < jEnd; ++j) {
                         currentCost = prevChar1Cost; // cost on diagonal (substitution)
                         prevChar1Cost = char1Costs[j];
@@ -250,7 +249,7 @@ namespace SoftWx.Match {
                     // no need to look beyond window of lower right diagonal - maxDistance cells (lower right diag is i - lenDiff)
                     // and the upper left diagonal + maxDistance cells (upper left is i)
                     jStart += (i > jStartOffset) ? 1 : 0;
-                    jEnd += (jEnd < len2) ? 1 : 0;
+                    if (jEnd < len2) char1Costs[jEnd++] = maxDistance + 1;
                     for (j = jStart; j < jEnd; ++j) {
                         currentCost = prevChar1Cost; // cost on diagonal (substitution)
                         prevChar1Cost = char1Costs[j];

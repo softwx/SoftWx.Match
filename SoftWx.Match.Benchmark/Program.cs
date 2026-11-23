@@ -14,10 +14,10 @@ namespace SoftWx.Match.Benchmark {
             BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);
         }
 
-        internal static List<string> RandomStrings(int minLen, int maxLen, int count, byte alphabetSize) {
+        internal static List<string> RandomStrings(int minLen, int maxLen, int count, byte alphabetSize, int seed = 1) {
             const string alphabet = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
             if (alphabetSize > alphabet.Length) alphabetSize = (byte)alphabet.Length;
-            var r = new Random(1);
+            var r = new Random(seed);
             var builder = new StringBuilder(maxLen);
             var list = new List<string>(count);
             while (list.Count < count) {
@@ -30,233 +30,160 @@ namespace SoftWx.Match.Benchmark {
             }
             return list;
         }
+
+        /// <summary>Creates a string within edit distance 2 of the input (2 edits: one near start, one near end)
+        /// so common prefix/suffix stripping does not trivially collapse the comparison.</summary>
+        internal static string MutateWithTwoEdits(string source, int variant) {
+            char[] chars = source.ToCharArray();
+            int len = chars.Length;
+            // First edit near the start (substitution or adjacent transposition)
+            if ((variant & 1) == 0 || len < 4) {
+                chars[0] = (chars[0] == 'z') ? 'a' : (char)(chars[0] + 1);
+            } else {
+                // Swap positions 0 and 1 (if identical, substitute position 0)
+                if (chars[0] != chars[1]) {
+                    (chars[0], chars[1]) = (chars[1], chars[0]);
+                } else {
+                    chars[0] = (chars[0] == 'z') ? 'a' : (char)(chars[0] + 1);
+                }
+            }
+            // Second edit near the end (substitution)
+            int endIdx = len - 1;
+            chars[endIdx] = (chars[endIdx] == 'z') ? 'a' : (char)(chars[endIdx] + 1);
+            return new string(chars);
+        }
+    }
+
+    public enum PairKind {
+        Similar,
+        Dissimilar
     }
 
     [MemoryDiagnoser]
-    public class LevenshteinBenchmarks {
-        private List<string> strings = null!;
+    public class LevenshteinDistanceBenchmarks {
+        private const int PairCount = 16;
+        private string[] left = null!;
+        private string[] right = null!;
         private Levenshtein levenshtein = null!;
-        private int maxDistance;
 
-        [Params(5, 15, 25, 100)]
+        [Params(6, 25, 1024)]
         public int StringLength { get; set; }
+
+        [Params(PairKind.Similar, PairKind.Dissimilar)]
+        public PairKind Kind { get; set; }
 
         [GlobalSetup]
         public void Setup() {
-            const int count = 40;
-            this.strings = Program.RandomStrings(this.StringLength, this.StringLength, count, 24);
+            var baseStrings = Program.RandomStrings(this.StringLength, this.StringLength, PairCount * 2, 24, seed: 1);
+            this.left = new string[PairCount];
+            this.right = new string[PairCount];
+            for (int i = 0; i < PairCount; i++) {
+                this.left[i] = baseStrings[i];
+                this.right[i] = this.Kind == PairKind.Similar
+                    ? Program.MutateWithTwoEdits(baseStrings[i], i)
+                    : baseStrings[PairCount + i];
+            }
             this.levenshtein = new Levenshtein(this.StringLength);
-            this.maxDistance = Math.Max(1, this.StringLength / 5);
         }
 
-        [Benchmark]
-        public double DistanceInstance() {
-            double result = 0;
-            int half = this.strings.Count / 2;
-            for (int i = 0; i < half; i++) {
-                for (int j = half; j < this.strings.Count; j++) {
-                    result += this.levenshtein.Distance(this.strings[i], this.strings[j]);
-                }
+        [Benchmark(OperationsPerInvoke = PairCount)]
+        public double InstanceUnbounded() {
+            double sum = 0;
+            for (int i = 0; i < PairCount; i++) {
+                sum += this.levenshtein.Distance(this.left[i], this.right[i]);
             }
-            return result;
+            return sum;
         }
 
-        [Benchmark]
-        public int DistanceStatic() {
-            int result = 0;
-            int half = this.strings.Count / 2;
-            for (int i = 0; i < half; i++) {
-                for (int j = half; j < this.strings.Count; j++) {
-                    result += Distance.Levenshtein(this.strings[i], this.strings[j]);
-                }
+        [Benchmark(OperationsPerInvoke = PairCount)]
+        public int StaticUnbounded() {
+            int sum = 0;
+            for (int i = 0; i < PairCount; i++) {
+                sum += Distance.Levenshtein(this.left[i], this.right[i]);
             }
-            return result;
+            return sum;
         }
 
-        [Benchmark]
-        public double DistanceMaxInstance() {
-            double result = 0;
-            int half = this.strings.Count / 2;
-            for (int i = 0; i < half; i++) {
-                for (int j = half; j < this.strings.Count; j++) {
-                    result += this.levenshtein.Distance(this.strings[i], this.strings[j], this.maxDistance);
-                }
+        [Benchmark(OperationsPerInvoke = PairCount)]
+        public double InstanceMax2() {
+            double sum = 0;
+            for (int i = 0; i < PairCount; i++) {
+                sum += this.levenshtein.Distance(this.left[i], this.right[i], 2);
             }
-            return result;
+            return sum;
         }
 
-        [Benchmark]
-        public int DistanceMaxStatic() {
-            int result = 0;
-            int half = this.strings.Count / 2;
-            for (int i = 0; i < half; i++) {
-                for (int j = half; j < this.strings.Count; j++) {
-                    result += Distance.Levenshtein(this.strings[i], this.strings[j], this.maxDistance);
-                }
+        [Benchmark(OperationsPerInvoke = PairCount)]
+        public int StaticMax2() {
+            int sum = 0;
+            for (int i = 0; i < PairCount; i++) {
+                sum += Distance.Levenshtein(this.left[i], this.right[i], 2);
             }
-            return result;
-        }
-
-        [Benchmark]
-        public double SimilarityInstance() {
-            double result = 0;
-            int half = this.strings.Count / 2;
-            for (int i = 0; i < half; i++) {
-                for (int j = half; j < this.strings.Count; j++) {
-                    result += this.levenshtein.Similarity(this.strings[i], this.strings[j]);
-                }
-            }
-            return result;
-        }
-
-        [Benchmark]
-        public double SimilarityStatic() {
-            double result = 0;
-            int half = this.strings.Count / 2;
-            for (int i = 0; i < half; i++) {
-                for (int j = half; j < this.strings.Count; j++) {
-                    result += Similarity.Levenshtein(this.strings[i], this.strings[j]);
-                }
-            }
-            return result;
-        }
-
-        [Benchmark]
-        public double SimilarityMinInstance() {
-            double result = 0;
-            int half = this.strings.Count / 2;
-            for (int i = 0; i < half; i++) {
-                for (int j = half; j < this.strings.Count; j++) {
-                    result += this.levenshtein.Similarity(this.strings[i], this.strings[j], 0.8);
-                }
-            }
-            return result;
-        }
-
-        [Benchmark]
-        public double SimilarityMinStatic() {
-            double result = 0;
-            int half = this.strings.Count / 2;
-            for (int i = 0; i < half; i++) {
-                for (int j = half; j < this.strings.Count; j++) {
-                    result += Similarity.Levenshtein(this.strings[i], this.strings[j], 0.8);
-                }
-            }
-            return result;
+            return sum;
         }
     }
 
     [MemoryDiagnoser]
-    public class DamerauOSABenchmarks {
-        private List<string> strings = null!;
+    public class DamerauOSADistanceBenchmarks {
+        private const int PairCount = 16;
+        private string[] left = null!;
+        private string[] right = null!;
         private DamerauOSA damerau = null!;
-        private int maxDistance;
 
-        [Params(5, 15, 25, 100)]
+        [Params(6, 25, 1024)]
         public int StringLength { get; set; }
+
+        [Params(PairKind.Similar, PairKind.Dissimilar)]
+        public PairKind Kind { get; set; }
 
         [GlobalSetup]
         public void Setup() {
-            const int count = 40;
-            this.strings = Program.RandomStrings(this.StringLength, this.StringLength, count, 24);
+            var baseStrings = Program.RandomStrings(this.StringLength, this.StringLength, PairCount * 2, 24, seed: 1);
+            this.left = new string[PairCount];
+            this.right = new string[PairCount];
+            for (int i = 0; i < PairCount; i++) {
+                this.left[i] = baseStrings[i];
+                this.right[i] = this.Kind == PairKind.Similar
+                    ? Program.MutateWithTwoEdits(baseStrings[i], i)
+                    : baseStrings[PairCount + i];
+            }
             this.damerau = new DamerauOSA(this.StringLength);
-            this.maxDistance = Math.Max(1, this.StringLength / 5);
         }
 
-        [Benchmark]
-        public double DistanceInstance() {
-            double result = 0;
-            int half = this.strings.Count / 2;
-            for (int i = 0; i < half; i++) {
-                for (int j = half; j < this.strings.Count; j++) {
-                    result += this.damerau.Distance(this.strings[i], this.strings[j]);
-                }
+        [Benchmark(OperationsPerInvoke = PairCount)]
+        public double InstanceUnbounded() {
+            double sum = 0;
+            for (int i = 0; i < PairCount; i++) {
+                sum += this.damerau.Distance(this.left[i], this.right[i]);
             }
-            return result;
+            return sum;
         }
 
-        [Benchmark]
-        public int DistanceStatic() {
-            int result = 0;
-            int half = this.strings.Count / 2;
-            for (int i = 0; i < half; i++) {
-                for (int j = half; j < this.strings.Count; j++) {
-                    result += Distance.DamerauOSA(this.strings[i], this.strings[j]);
-                }
+        [Benchmark(OperationsPerInvoke = PairCount)]
+        public int StaticUnbounded() {
+            int sum = 0;
+            for (int i = 0; i < PairCount; i++) {
+                sum += Distance.DamerauOSA(this.left[i], this.right[i]);
             }
-            return result;
+            return sum;
         }
 
-        [Benchmark]
-        public double DistanceMaxInstance() {
-            double result = 0;
-            int half = this.strings.Count / 2;
-            for (int i = 0; i < half; i++) {
-                for (int j = half; j < this.strings.Count; j++) {
-                    result += this.damerau.Distance(this.strings[i], this.strings[j], this.maxDistance);
-                }
+        [Benchmark(OperationsPerInvoke = PairCount)]
+        public double InstanceMax2() {
+            double sum = 0;
+            for (int i = 0; i < PairCount; i++) {
+                sum += this.damerau.Distance(this.left[i], this.right[i], 2);
             }
-            return result;
+            return sum;
         }
 
-        [Benchmark]
-        public int DistanceMaxStatic() {
-            int result = 0;
-            int half = this.strings.Count / 2;
-            for (int i = 0; i < half; i++) {
-                for (int j = half; j < this.strings.Count; j++) {
-                    result += Distance.DamerauOSA(this.strings[i], this.strings[j], this.maxDistance);
-                }
+        [Benchmark(OperationsPerInvoke = PairCount)]
+        public int StaticMax2() {
+            int sum = 0;
+            for (int i = 0; i < PairCount; i++) {
+                sum += Distance.DamerauOSA(this.left[i], this.right[i], 2);
             }
-            return result;
-        }
-
-        [Benchmark]
-        public double SimilarityInstance() {
-            double result = 0;
-            int half = this.strings.Count / 2;
-            for (int i = 0; i < half; i++) {
-                for (int j = half; j < this.strings.Count; j++) {
-                    result += this.damerau.Similarity(this.strings[i], this.strings[j]);
-                }
-            }
-            return result;
-        }
-
-        [Benchmark]
-        public double SimilarityStatic() {
-            double result = 0;
-            int half = this.strings.Count / 2;
-            for (int i = 0; i < half; i++) {
-                for (int j = half; j < this.strings.Count; j++) {
-                    result += Similarity.DamerauOSA(this.strings[i], this.strings[j]);
-                }
-            }
-            return result;
-        }
-
-        [Benchmark]
-        public double SimilarityMinInstance() {
-            double result = 0;
-            int half = this.strings.Count / 2;
-            for (int i = 0; i < half; i++) {
-                for (int j = half; j < this.strings.Count; j++) {
-                    result += this.damerau.Similarity(this.strings[i], this.strings[j], 0.8);
-                }
-            }
-            return result;
-        }
-
-        [Benchmark]
-        public double SimilarityMinStatic() {
-            double result = 0;
-            int half = this.strings.Count / 2;
-            for (int i = 0; i < half; i++) {
-                for (int j = half; j < this.strings.Count; j++) {
-                    result += Similarity.DamerauOSA(this.strings[i], this.strings[j], 0.8);
-                }
-            }
-            return result;
+            return sum;
         }
     }
 }
