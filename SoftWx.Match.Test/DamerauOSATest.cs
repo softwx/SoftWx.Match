@@ -432,6 +432,41 @@ namespace SoftWx.Match.Test {
         }
 
         [TestMethod]
+        public void DamerauOSALongerStringsShouldMatchReferenceImplementation() {
+            var ed = new DamerauOSA();
+            var pairs = TestHelper.BuildLongerTestPairs();
+            int[] maxDistances = [0, 1, 2, 3, 4, 5, 8];
+            double[] minSimilarities = [0.0, 0.5, 0.7, 0.85, 0.95];
+
+            foreach (var (s1, s2) in pairs) {
+                int expectedDist = EditDistanceReference.RefDamerauOSA(s1, s2);
+                int maxLen = Math.Max(s1.Length, s2.Length);
+                double expectedSim = (maxLen == 0) ? 1.0 : 1.0 - (expectedDist / (double)maxLen);
+
+                Assert.AreEqual(expectedDist, (int)ed.Distance(s1, s2), $"len1={s1.Length}, len2={s2.Length}");
+                Assert.AreEqual(expectedDist, Distance.DamerauOSA(s1, s2), $"len1={s1.Length}, len2={s2.Length}");
+                Assert.AreEqual(expectedSim, ed.Similarity(s1, s2), 1e-12, $"len1={s1.Length}, len2={s2.Length}");
+                Assert.AreEqual(expectedSim, Similarity.DamerauOSA(s1, s2), 1e-12, $"len1={s1.Length}, len2={s2.Length}");
+
+                foreach (int maxDist in maxDistances) {
+                    int expectedBounded = (expectedDist <= maxDist) ? expectedDist : -1;
+                    Assert.AreEqual(expectedBounded, (int)ed.Distance(s1, s2, maxDist), $"len1={s1.Length}, len2={s2.Length}, max={maxDist}");
+                    Assert.AreEqual(expectedBounded, Distance.DamerauOSA(s1, s2, maxDist), $"len1={s1.Length}, len2={s2.Length}, max={maxDist}");
+#if !TEST_NETSTANDARD
+                    Assert.AreEqual(expectedBounded, (int)ed.Distance(s1.AsSpan(), s2.AsSpan(), maxDist), $"span len1={s1.Length}, len2={s2.Length}, max={maxDist}");
+                    Assert.AreEqual(expectedBounded, Distance.DamerauOSA(s1.AsSpan(), s2.AsSpan(), maxDist), $"span len1={s1.Length}, len2={s2.Length}, max={maxDist}");
+#endif
+                }
+
+                foreach (double minSim in minSimilarities) {
+                    double expectedBoundedSim = (expectedSim + 1e-12 >= minSim) ? expectedSim : -1;
+                    Assert.AreEqual(expectedBoundedSim, ed.Similarity(s1, s2, minSim), 1e-12, $"len1={s1.Length}, len2={s2.Length}, min={minSim}");
+                    Assert.AreEqual(expectedBoundedSim, Similarity.DamerauOSA(s1, s2, minSim), 1e-12, $"len1={s1.Length}, len2={s2.Length}, min={minSim}");
+                }
+            }
+        }
+
+        [TestMethod]
         public void DamerauOSAShouldHandleStringsExceedingMaxCachedBufferLength() {
             string s1 = "x" + new string('a', 598) + "y";
             string s2 = "z" + new string('a', 598) + "w";
