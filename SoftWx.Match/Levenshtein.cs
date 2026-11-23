@@ -1,6 +1,7 @@
-﻿// Copyright ©2015-2018 SoftWx, Inc.
+﻿// Copyright ©2015-2026 SoftWx, Inc.
 // Released under the MIT License the text of which appears at the end of this file.
 // <authors> Steve Hatchett
+
 using System;
 using System.Runtime.CompilerServices;
 
@@ -9,25 +10,25 @@ namespace SoftWx.Match {
     /// Class providing optimized methods for computing Levenshtein comparisons between two strings.
     /// </summary>
     /// <remarks>
-    /// Copyright ©2015-2018 SoftWx, Inc.
-    /// The inspiration for creating highly optimized edit distance functions was 
+    /// Copyright ©2015-2026 SoftWx, Inc.
+    /// The inspiration for creating highly optimized edit distance functions was
     /// from Sten Hjelmqvist's "Fast, memory efficient" algorithm, described at
-    /// http://www.codeproject.com/Articles/13525/Fast-memory-efficient-Levenshtein-algorithm
+    /// https://www.codeproject.com/Articles/13525/Fast-memory-efficient-Levenshtein-algorithm
     /// The Levenshtein algorithm computes the edit distance metric between two strings, i.e.
     /// the number of insertion, deletion, and substitution edits required to transform one
     /// string to the other. This value will be >= 0, where 0 indicates identical strings.
-    /// Comparisons are case sensitive, so for example, "Fred" and "fred" will have a 
+    /// Comparisons are case sensitive, so for example, "Fred" and "fred" will have a
     /// distance of 1. The optimized algorithm was described in detail in my post at
     /// http://blog.softwx.net/2014/12/optimizing-levenshtein-algorithm-in-c.html
-    /// Also see http://en.wikipedia.org/wiki/Levenshtein_distance for general information.
+    /// Also see https://en.wikipedia.org/wiki/Levenshtein_distance for general information.
     /// The methods in this class are not threadsafe. Use the static versions in the Distance
-    /// class if that is required.</remarks>
+    /// and Similarity classes if that is required.</remarks>
     public class Levenshtein : IDistance, ISimilarity {
         private int[] baseChar1Costs;
 
         /// <summary>Create a new instance of Levenshtein.</summary>
         public Levenshtein() {
-            this.baseChar1Costs = new int[0];
+            this.baseChar1Costs = Array.Empty<int>();
         }
 
         /// <summary>Create a new instance of Levenshtein using the specified expected
@@ -37,7 +38,10 @@ namespace SoftWx.Match {
         /// <param name="expectedMaxStringLength">The expected maximum length of strings that will
         /// be passed to the Levenshtein methods.</param>
         public Levenshtein(int expectedMaxStringLength) {
-            this.baseChar1Costs = new int[expectedMaxStringLength];
+            if (expectedMaxStringLength < 0) {
+                throw new ArgumentOutOfRangeException(nameof(expectedMaxStringLength), expectedMaxStringLength, "expectedMaxStringLength must be non-negative.");
+            }
+            this.baseChar1Costs = expectedMaxStringLength == 0 ? Array.Empty<int>() : new int[expectedMaxStringLength];
         }
 
         /// <summary>Compute and return the Levenshtein edit distance between two strings.</summary>
@@ -47,21 +51,20 @@ namespace SoftWx.Match {
         /// <param name="string2">The other string to compare.</param>
         /// <returns>0 if the strings are equivalent, otherwise a positive number whose
         /// magnitude increases as difference between the strings increases.</returns>
-        public double Distance(string string1, string string2) {
-            if (string1 == null) return (string2 ?? "").Length;
+        public double Distance(string? string1, string? string2) {
+            if (string1 == null) return (string2 ?? string.Empty).Length;
             if (string2 == null) return string1.Length;
 
             // if strings of different lengths, ensure shorter string is in string1. This can result in a little
             // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) { var t = string1; string1 = string2; string2 = t; }
+            if (string1.Length > string2.Length) (string1, string2) = (string2, string1);
 
             // identify common suffix and/or prefix that can be ignored
-            int len1, len2, start;
-            Helpers.PrefixSuffixPrep(string1, string2, out len1, out len2, out start);
+            Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
             if (len1 == 0) return len2;
 
             return Distance(string1, string2, len1, len2, start,
-                (this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2]));
+                this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2]);
         }
 
         /// <summary>Compute and return the Levenshtein edit distance between two strings.</summary>
@@ -73,28 +76,29 @@ namespace SoftWx.Match {
         /// <returns>-1 if the distance is greater than the maxDistance, 0 if the strings
         /// are equivalent, otherwise a positive number whose magnitude increases as
         /// difference between the strings increases.</returns>
-        public double Distance(string string1, string string2, double maxDistance) {
-            if (string1 == null || string2 == null) return Helpers.NullDistanceResults(string1, string2, maxDistance);
-            if (maxDistance <= 0) return (string1 == string2) ? 0 : -1;
-            maxDistance = Math.Ceiling(maxDistance);
-            int iMaxDistance = (maxDistance <= int.MaxValue) ? (int)maxDistance : int.MaxValue;
+        public double Distance(string? string1, string? string2, double maxDistance) {
+            if (double.IsNaN(maxDistance)) return -1;
+            int iMaxDistance = (maxDistance < int.MinValue) ? int.MinValue
+                : (maxDistance > int.MaxValue) ? int.MaxValue
+                : (int)Math.Floor(maxDistance);
+            if (string1 == null || string2 == null) return Helpers.NullDistanceResults(string1, string2, iMaxDistance);
+            if (iMaxDistance <= 0) return (string1 == string2) ? 0 : -1;
 
             // if strings of different lengths, ensure shorter string is in string1. This can result in a little
             // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) { var t = string1; string1 = string2; string2 = t; }
+            if (string1.Length > string2.Length) (string1, string2) = (string2, string1);
             if (string2.Length - string1.Length > iMaxDistance) return -1;
 
             // identify common suffix and/or prefix that can be ignored
-            int len1, len2, start;
-            Helpers.PrefixSuffixPrep(string1, string2, out len1, out len2, out start);
+            Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
             if (len1 == 0) return (len2 <= iMaxDistance) ? len2 : -1;
 
             if (iMaxDistance < len2) {
                 return Distance(string1, string2, len1, len2, start, iMaxDistance,
-                    (this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2]));
+                    this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2]);
             }
             return Distance(string1, string2, len1, len2, start,
-                (this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2]));
+                this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2]);
         }
 
         /// <summary>Return Levenshtein similarity between two strings
@@ -102,59 +106,58 @@ namespace SoftWx.Match {
         /// <param name="string1">One of the strings to compare.</param>
         /// <param name="string2">The other string to compare.</param>
         /// <returns>The degree of similarity 0 to 1.0, where 0 represents a lack of any
-        /// noteable similarity, and 1 represents equivalent strings.</returns>
-        public double Similarity(string string1, string string2) {
+        /// notable similarity, and 1 represents equivalent strings.</returns>
+        public double Similarity(string? string1, string? string2) {
             if (string1 == null) return (string2 == null) ? 1 : 0;
             if (string2 == null) return 0;
 
             // if strings of different lengths, ensure shorter string is in string1. This can result in a little
             // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) { var t = string1; string1 = string2; string2 = t; }
+            if (string1.Length > string2.Length) (string1, string2) = (string2, string1);
 
             // identify common suffix and/or prefix that can be ignored
-            int len1, len2, start;
-            Helpers.PrefixSuffixPrep(string1, string2, out len1, out len2, out start);
-            if (len1 == 0) return 1.0;
+            Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
+            if (len1 == 0) return (len2 == 0) ? 1.0 : len2.ToSimilarity(string2.Length);
 
             return Distance(string1, string2, len1, len2, start,
-                    (this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2]))
+                    this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2])
                     .ToSimilarity(string2.Length);
         }
 
-
-        /// <summary>Return Levenshtein similarity between two strings 
+        /// <summary>Return Levenshtein similarity between two strings
         /// (1 - (levenshtein distance / len of longer string)).</summary>
         /// <param name="string1">One of the strings to compare.</param>
         /// <param name="string2">The other string to compare.</param>
         /// <param name="minSimilarity">The minimum similarity that is of interest.</param>
         /// <returns>The degree of similarity 0 to 1.0, where -1 represents a similarity
         /// lower than minSimilarity, otherwise, a number between 0 and 1.0 where 0
-        /// represents a lack of any noteable similarity, and 1 represents equivalent
+        /// represents a lack of any notable similarity, and 1 represents equivalent
         /// strings.</returns>
-        public double Similarity(string string1, string string2, double minSimilarity) {
-            if (minSimilarity < 0 || minSimilarity > 1) throw new ArgumentException("minSimilarity must be in range 0 to 1.0");
+        public double Similarity(string? string1, string? string2, double minSimilarity) {
+            if (double.IsNaN(minSimilarity) || minSimilarity < 0 || minSimilarity > 1) {
+                throw new ArgumentOutOfRangeException(nameof(minSimilarity), minSimilarity, "minSimilarity must be in range 0 to 1.0");
+            }
             if (string1 == null || string2 == null) return Helpers.NullSimilarityResults(string1, string2, minSimilarity);
 
             // if strings of different lengths, ensure shorter string is in string1. This can result in a little
             // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) { var t = string1; string1 = string2; string2 = t; }
+            if (string1.Length > string2.Length) (string1, string2) = (string2, string1);
 
             int iMaxDistance = minSimilarity.ToDistance(string2.Length);
             if (string2.Length - string1.Length > iMaxDistance) return -1;
             if (iMaxDistance == 0) return (string1 == string2) ? 1 : -1;
 
             // identify common suffix and/or prefix that can be ignored
-            int len1, len2, start;
-            Helpers.PrefixSuffixPrep(string1, string2, out len1, out len2, out start);
-            if (len1 == 0) return 1.0;
+            Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
+            if (len1 == 0) return (len2 == 0) ? 1.0 : len2.ToSimilarity(string2.Length);
 
             if (iMaxDistance < len2) {
                 return Distance(string1, string2, len1, len2, start, iMaxDistance,
-                        (this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2]))
+                        this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2])
                         .ToSimilarity(string2.Length);
             }
             return Distance(string1, string2, len1, len2, start,
-                    (this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2]))
+                    this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2])
                     .ToSimilarity(string2.Length);
         }
 
@@ -202,37 +205,12 @@ namespace SoftWx.Match {
             return currentCharCost;
         }
 
-
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        //internal static int DistanceExperiment(string string1, string string2, int len1, int len2, int start, int[] char1Costs) {
-        //    if (char1Costs[len2-1] > -len2) for (int j = 0; j < len2; ++j) char1Costs[j] = 0;
-        //    int currentCharCost = 0;
-        //    for (int i = 0; i < len1; ++i) {
-        //        char char1 = string1[i + start];
-        //        int prevChar1Cost, aboveCharCost;
-        //        prevChar1Cost = aboveCharCost = i;
-        //        for (int j = 0; j < len2; ++j) {
-        //            currentCharCost = prevChar1Cost - 1; // cost on diagonal (substitution)
-        //            prevChar1Cost = char1Costs[j];
-        //            if (string2[start + j] != char1) {
-        //                // substitution if neither of two conditions below
-        //                if (aboveCharCost <= currentCharCost) currentCharCost = aboveCharCost - 1; // deletion
-        //                if (prevChar1Cost < currentCharCost) currentCharCost = prevChar1Cost; // insertion
-        //                ++currentCharCost;
-        //            }
-        //            char1Costs[j] = aboveCharCost = currentCharCost;
-        //        }
-        //    }
-        //    return currentCharCost + len2;
-        //}
-
         /// <summary>Internal implementation of the core Levenshtein algorithm that accepts a maxDistance.</summary>
         /// <remarks>https://github.com/softwx/SoftWx.Match</remarks>
         internal static int Distance(string string1, string string2, int len1, int len2, int start, int maxDistance, int[] char1Costs) {
-//            if (maxDistance >= len2) return Distance(string1, string2, len1, len2, start, char1Costs);
 #if DEBUG
-                    if (len2 < maxDistance) throw new ArgumentException();
-                    if (len2-len1 > maxDistance) throw new ArgumentException();
+            if (len2 < maxDistance) throw new ArgumentException("len2 must be >= maxDistance", nameof(maxDistance));
+            if (len2 - len1 > maxDistance) throw new ArgumentException("len2 - len1 must be <= maxDistance", nameof(maxDistance));
 #endif
             int i, j;
             for (j = 0; j < maxDistance;) char1Costs[j] = ++j;
@@ -257,7 +235,7 @@ namespace SoftWx.Match {
                         if (string2[j] != char1) {
                             // substitution if neither of two conditions below
                             if (aboveCharCost < currentCost) currentCost = aboveCharCost; // deletion
-                            if (prevChar1Cost < currentCost) currentCost = prevChar1Cost;   // insertion
+                            if (prevChar1Cost < currentCost) currentCost = prevChar1Cost; // insertion
                             ++currentCost;
                         }
                         char1Costs[j] = aboveCharCost = currentCost;
@@ -279,7 +257,7 @@ namespace SoftWx.Match {
                         if (string2[start + j] != char1) {
                             // substitution if neither of two conditions below
                             if (aboveCharCost < currentCost) currentCost = aboveCharCost; // deletion
-                            if (prevChar1Cost < currentCost) currentCost = prevChar1Cost;   // insertion
+                            if (prevChar1Cost < currentCost) currentCost = prevChar1Cost; // insertion
                             ++currentCost;
                         }
                         char1Costs[j] = aboveCharCost = currentCost;

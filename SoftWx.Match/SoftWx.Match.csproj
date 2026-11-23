@@ -1,52 +1,37 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard1.0</TargetFramework>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>2.0.3</Version>
+    <TargetFrameworks>netstandard2.0;net8.0;net10.0</TargetFrameworks>
+    <Version>3.0.0</Version>
     <Authors>Steve Hatchett</Authors>
     <Company>SoftWx, Inc.</Company>
-    <Description>Library (.Net Standard 1.0) to support text and person name matching.
-Currently contains Levenshtein and Damerau-Levenshtein (optimal string alignment version) edit distance and normalized similarity functions optimized for speed and reduced memory consumption. There are also versions of the functions that accept a maximum desired distance or minimum desired similarity, which can result in significantly faster speeds, particularly for long strings. This is one of the faster C# implementations available (possibly the fastest for non-trivial strings). See the associated GitHub project for more detail.
-MIT License</Description>
-    <Copyright>Copyright ©  2015-2018 SoftWx, Inc.</Copyright>
-    <PackageLicenseUrl>https://github.com/softwx/SoftWx.Match/blob/master/LICENSE</PackageLicenseUrl>
+    <Description>C# library to support text and person name fuzzy matching. Contains Levenshtein and Damerau-Levenshtein (optimal string alignment) edit distance and normalized similarity functions optimized for speed and reduced memory consumption, including bounded max-distance and min-similarity variants.</Description>
+    <Copyright>Copyright © 2015-2026 SoftWx, Inc.</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/softwx/SoftWx.Match</PackageProjectUrl>
-    <PackageIconUrl>http://www.softwx.net/files/images/softwx50x50.png</PackageIconUrl>
-    <RepositoryType>github</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/softwx/SoftWx.Match</RepositoryUrl>
-    <PackageReleaseNotes>v2.0.3 Added DamerauOSA similarity functions, added additional maxDistance early exit, improved speed of Levenshtein similarity functions
-v2.0.2 Corrected some comments, added Levenshtein similarity functions, added xml docs
-v2.0.0 Initial Nuget version</PackageReleaseNotes>
-    <PackageTags>levenshtein damerau matching fuzzy softwx</PackageTags>
-  </PropertyGroup>
+    <PackageReleaseNotes>v3.0.0
+- Multi-targeted for netstandard2.0, net8.0, and net10.0 (dropped netstandard1.0)
+- Enabled nullable reference types, trimming/NativeAOT compatibility, and built-in Source Link
+- Fixed Similarity returning 1.0 when one string is a prefix or suffix of the other
+- Fixed inverted null handling in Similarity.DamerauOSA and Helpers.NullSimilarityResults
+- Fixed fractional and NaN maxDistance handling in Levenshtein.Distance and DamerauOSA.Distance
+- Added missing ISimilarity interface declaration to DamerauOSA</PackageReleaseNotes>
+    <PackageTags>levenshtein;damerau;damerau-levenshtein;edit-distance;similarity;matching;fuzzy;softwx</PackageTags>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <WarningsAsErrors />
-    <DocumentationFile>bin\Release\netstandard1.0\SoftWx.Match.xml</DocumentationFile>
-    <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
-    <LangVersion>default</LangVersion>
-    <DebugType>portable</DebugType>
-    <DebugSymbols>true</DebugSymbols>
-    <NoWarn>1701;1702;1705</NoWarn>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <WarningsAsErrors />
-    <DocumentationFile>bin\Debug\netstandard1.0\SoftWx.Match.xml</DocumentationFile>
-    <GenerateSerializationAssemblies>Off</GenerateSerializationAssemblies>
-    <LangVersion>default</LangVersion>
-    <DebugType>full</DebugType>
-    <DebugSymbols>true</DebugSymbols>
-    <NoWarn>1701;1702;1705</NoWarn>
-    <Optimize>false</Optimize>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <IsTrimmable Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net6.0'))">true</IsTrimmable>
+    <IsAotCompatible Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0'))">true</IsAotCompatible>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="EditDistanceOld.cs" />
-    <Compile Remove="StringExtensions.cs" />
+    <None Include="..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
- </Project>
+
+</Project>

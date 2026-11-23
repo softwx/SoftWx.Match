@@ -1,17 +1,18 @@
-﻿// Copyright ©2015-2018 SoftWx, Inc.
+﻿// Copyright ©2015-2026 SoftWx, Inc.
 // Released under the MIT License the text of which appears at the end of this file.
 // <authors> Steve Hatchett
 
 using System.Collections.Generic;
 
 namespace SoftWx.Match.Test {
-    internal class TestHelper {
+    internal static class TestHelper {
         public static List<string> BuildTestStrings(int minLength, int maxLength) {
             var strings = new List<string>(500);
-            if (minLength == 0) strings.Add("");
-            BuildStrings("", minLength, maxLength, strings);
+            if (minLength == 0) strings.Add(string.Empty);
+            BuildStrings(string.Empty, minLength, maxLength, strings);
             return strings;
         }
+
         private static void BuildStrings(string s, int minLength, int maxLength, List<string> strings) {
             const string alphabet = "abcd";
             foreach (var c in alphabet) {

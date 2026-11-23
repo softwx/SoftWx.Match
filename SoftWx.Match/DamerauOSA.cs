@@ -1,4 +1,4 @@
-﻿// Copyright ©2015-2018 SoftWx, Inc.
+﻿// Copyright ©2015-2026 SoftWx, Inc.
 // Released under the MIT License the text of which appears at the end of this file.
 // <authors> Steve Hatchett
 
@@ -11,17 +11,17 @@ namespace SoftWx.Match {
     /// Alignment (OSA) comparisons between two strings.
     /// </summary>
     /// <remarks>
-    /// Copyright ©2015-2018 SoftWx, Inc.
-    /// The inspiration for creating highly optimized edit distance functions was 
+    /// Copyright ©2015-2026 SoftWx, Inc.
+    /// The inspiration for creating highly optimized edit distance functions was
     /// from Sten Hjelmqvist's "Fast, memory efficient" algorithm, described at
-    /// http://www.codeproject.com/Articles/13525/Fast-memory-efficient-Levenshtein-algorithm
-    /// The Damerau-Levenshtein algorithm is basically the Levenshtein algorithm with a 
+    /// https://www.codeproject.com/Articles/13525/Fast-memory-efficient-Levenshtein-algorithm
+    /// The Damerau-Levenshtein algorithm is basically the Levenshtein algorithm with a
     /// modification that considers transposition of two adjacent characters as a single edit.
-    /// The optimized algorithm was described in detail in my post at 
+    /// The optimized algorithm was described in detail in my post at
     /// http://blog.softwx.net/2015/01/optimizing-damerau-levenshtein_15.html
-    /// Also see http://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance
+    /// Also see https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance
     /// Note that this implementation of Damerau-Levenshtein is the simpler and faster optimal
-    /// string alignment (aka restricted edit) distance that difers slightly from the classic
+    /// string alignment (aka restricted edit) distance that differs slightly from the classic
     /// algorithm by imposing the restriction that no substring is edited more than once. So,
     /// for example, "CA" to "ABC" has an edit distance of 2 by a complete application of
     /// Damerau-Levenshtein, but has a distance of 3 by the method implemented here, that uses
@@ -29,21 +29,21 @@ namespace SoftWx.Match {
     /// metric since it does not uphold the triangle inequality. In real use though, this OSA
     /// version may be desired. Besides being faster, it does not give the lower distance score
     /// for transpositions that occur across long distances. Actual human error transpositions
-    /// are most likely for adjacent characters. For example, the classic Damerau algorithm 
+    /// are most likely for adjacent characters. For example, the classic Damerau algorithm
     /// gives a distance of 1 for these two strings: "sated" and "dates" (it counts the 's' and
-    /// 'd' as a single transposition. The optimal string alignment version of Damerau in this
+    /// 'd' as a single transposition). The optimal string alignment version of Damerau in this
     /// class gives a distance of 2 for these two strings (2 substitutions), as it only counts
     /// transpositions for adjacent characters.
     /// The methods in this class are not threadsafe. Use the static versions in the Distance
-    /// class if that is required.</remarks>
-    public class DamerauOSA : IDistance {
+    /// and Similarity classes if that is required.</remarks>
+    public class DamerauOSA : IDistance, ISimilarity {
         private int[] baseChar1Costs;
         private int[] basePrevChar1Costs;
 
         /// <summary>Create a new instance of DamerauOSA.</summary>
         public DamerauOSA() {
-            this.baseChar1Costs = new int[0];
-            this.basePrevChar1Costs = new int[0];
+            this.baseChar1Costs = Array.Empty<int>();
+            this.basePrevChar1Costs = Array.Empty<int>();
         }
 
         /// <summary>Create a new instance of DamerauOSA using the specified expected
@@ -53,8 +53,16 @@ namespace SoftWx.Match {
         /// <param name="expectedMaxStringLength">The expected maximum length of strings that will
         /// be passed to the edit distance functions.</param>
         public DamerauOSA(int expectedMaxStringLength) {
-            this.baseChar1Costs = new int[expectedMaxStringLength];
-            this.basePrevChar1Costs = new int[expectedMaxStringLength];
+            if (expectedMaxStringLength < 0) {
+                throw new ArgumentOutOfRangeException(nameof(expectedMaxStringLength), expectedMaxStringLength, "expectedMaxStringLength must be non-negative.");
+            }
+            if (expectedMaxStringLength == 0) {
+                this.baseChar1Costs = Array.Empty<int>();
+                this.basePrevChar1Costs = Array.Empty<int>();
+            } else {
+                this.baseChar1Costs = new int[expectedMaxStringLength];
+                this.basePrevChar1Costs = new int[expectedMaxStringLength];
+            }
         }
 
         /// <summary>Compute and return the Damerau-Levenshtein optimal string
@@ -65,17 +73,16 @@ namespace SoftWx.Match {
         /// <param name="string2">The other string to compare.</param>
         /// <returns>0 if the strings are equivalent, otherwise a positive number whose
         /// magnitude increases as difference between the strings increases.</returns>
-        public double Distance(string string1, string string2) {
-            if (string1 == null) return (string2 ?? "").Length;
+        public double Distance(string? string1, string? string2) {
+            if (string1 == null) return (string2 ?? string.Empty).Length;
             if (string2 == null) return string1.Length;
 
             // if strings of different lengths, ensure shorter string is in string1. This can result in a little
             // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) { var t = string1; string1 = string2; string2 = t; }
+            if (string1.Length > string2.Length) (string1, string2) = (string2, string1);
 
             // identify common suffix and/or prefix that can be ignored
-            int len1, len2, start;
-            Helpers.PrefixSuffixPrep(string1, string2, out len1, out len2, out start);
+            Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
             if (len1 == 0) return len2;
 
             if (len2 > this.baseChar1Costs.Length) {
@@ -95,20 +102,21 @@ namespace SoftWx.Match {
         /// <returns>-1 if the distance is greater than the maxDistance, 0 if the strings
         /// are equivalent, otherwise a positive number whose magnitude increases as
         /// difference between the strings increases.</returns>
-        public double Distance(string string1, string string2, double maxDistance) {
-            if (string1 == null || string2 == null) return Helpers.NullDistanceResults(string1, string2, maxDistance);
-            if (maxDistance <= 0) return (string1 == string2) ? 0 : -1;
-            maxDistance = Math.Ceiling(maxDistance);
-            int iMaxDistance = (maxDistance <= int.MaxValue) ? (int)maxDistance : int.MaxValue;
+        public double Distance(string? string1, string? string2, double maxDistance) {
+            if (double.IsNaN(maxDistance)) return -1;
+            int iMaxDistance = (maxDistance < int.MinValue) ? int.MinValue
+                : (maxDistance > int.MaxValue) ? int.MaxValue
+                : (int)Math.Floor(maxDistance);
+            if (string1 == null || string2 == null) return Helpers.NullDistanceResults(string1, string2, iMaxDistance);
+            if (iMaxDistance <= 0) return (string1 == string2) ? 0 : -1;
 
             // if strings of different lengths, ensure shorter string is in string1. This can result in a little
             // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) { var t = string1; string1 = string2; string2 = t; }
+            if (string1.Length > string2.Length) (string1, string2) = (string2, string1);
             if (string2.Length - string1.Length > iMaxDistance) return -1;
 
             // identify common suffix and/or prefix that can be ignored
-            int len1, len2, start;
-            Helpers.PrefixSuffixPrep(string1, string2, out len1, out len2, out start);
+            Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
             if (len1 == 0) return (len2 <= iMaxDistance) ? len2 : -1;
 
             if (len2 > this.baseChar1Costs.Length) {
@@ -126,19 +134,18 @@ namespace SoftWx.Match {
         /// <param name="string1">One of the strings to compare.</param>
         /// <param name="string2">The other string to compare.</param>
         /// <returns>The degree of similarity 0 to 1.0, where 0 represents a lack of any
-        /// noteable similarity, and 1 represents equivalent strings.</returns>
-        public double Similarity(string string1, string string2) {
+        /// notable similarity, and 1 represents equivalent strings.</returns>
+        public double Similarity(string? string1, string? string2) {
             if (string1 == null) return (string2 == null) ? 1 : 0;
             if (string2 == null) return 0;
 
             // if strings of different lengths, ensure shorter string is in string1. This can result in a little
             // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) { var t = string1; string1 = string2; string2 = t; }
+            if (string1.Length > string2.Length) (string1, string2) = (string2, string1);
 
             // identify common suffix and/or prefix that can be ignored
-            int len1, len2, start;
-            Helpers.PrefixSuffixPrep(string1, string2, out len1, out len2, out start);
-            if (len1 == 0) return 1.0;
+            Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
+            if (len1 == 0) return (len2 == 0) ? 1.0 : len2.ToSimilarity(string2.Length);
 
             if (len2 > this.baseChar1Costs.Length) {
                 this.baseChar1Costs = new int[len2];
@@ -155,24 +162,25 @@ namespace SoftWx.Match {
         /// <param name="minSimilarity">The minimum similarity that is of interest.</param>
         /// <returns>The degree of similarity 0 to 1.0, where -1 represents a similarity
         /// lower than minSimilarity, otherwise, a number between 0 and 1.0 where 0
-        /// represents a lack of any noteable similarity, and 1 represents equivalent
+        /// represents a lack of any notable similarity, and 1 represents equivalent
         /// strings.</returns>
-        public double Similarity(string string1, string string2, double minSimilarity) {
-            if (minSimilarity < 0 || minSimilarity > 1) throw new ArgumentException("minSimilarity must be in range 0 to 1.0");
+        public double Similarity(string? string1, string? string2, double minSimilarity) {
+            if (double.IsNaN(minSimilarity) || minSimilarity < 0 || minSimilarity > 1) {
+                throw new ArgumentOutOfRangeException(nameof(minSimilarity), minSimilarity, "minSimilarity must be in range 0 to 1.0");
+            }
             if (string1 == null || string2 == null) return Helpers.NullSimilarityResults(string1, string2, minSimilarity);
 
             // if strings of different lengths, ensure shorter string is in string1. This can result in a little
             // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) { var t = string1; string1 = string2; string2 = t; }
+            if (string1.Length > string2.Length) (string1, string2) = (string2, string1);
 
             int iMaxDistance = minSimilarity.ToDistance(string2.Length);
             if (string2.Length - string1.Length > iMaxDistance) return -1;
             if (iMaxDistance <= 0) return (string1 == string2) ? 1 : -1;
 
             // identify common suffix and/or prefix that can be ignored
-            int len1, len2, start;
-            Helpers.PrefixSuffixPrep(string1, string2, out len1, out len2, out start);
-            if (len1 == 0) return 1.0;
+            Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
+            if (len1 == 0) return (len2 == 0) ? 1.0 : len2.ToSimilarity(string2.Length);
 
             if (len2 > this.baseChar1Costs.Length) {
                 this.baseChar1Costs = new int[len2];
@@ -209,14 +217,14 @@ namespace SoftWx.Match {
                     char prevChar2 = char2;
                     char2 = string2[start + j];
                     if (char1 != char2) {
-                        //substitution if neither of two conditions below
+                        // substitution if neither of two conditions below
                         if (aboveCharCost < currentCost) currentCost = aboveCharCost; // deletion
                         if (leftCharCost < currentCost) currentCost = leftCharCost;   // insertion
                         ++currentCost;
                         if ((i != 0) && (j != 0)
                             && (char1 == prevChar2)
                             && (prevChar1 == char2)
-                            && (thisTransCost + 1 < currentCost)) { 
+                            && (thisTransCost + 1 < currentCost)) {
                             currentCost = thisTransCost + 1; // transposition
                         }
                     }
@@ -231,8 +239,8 @@ namespace SoftWx.Match {
         /// <remarks>https://github.com/softwx/SoftWx.Match</remarks>
         internal static int Distance(string string1, string string2, int len1, int len2, int start, int maxDistance, int[] char1Costs, int[] prevChar1Costs) {
 #if DEBUG
-            if (len2 < maxDistance) throw new ArgumentException();
-            if (len2-len1 > maxDistance) throw new ArgumentException();
+            if (len2 < maxDistance) throw new ArgumentException("len2 must be >= maxDistance", nameof(maxDistance));
+            if (len2 - len1 > maxDistance) throw new ArgumentException("len2 - len1 must be <= maxDistance", nameof(maxDistance));
 #endif
             int i, j;
             for (j = 0; j < maxDistance;) char1Costs[j] = ++j;

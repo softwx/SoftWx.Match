@@ -1,4 +1,4 @@
-﻿// Copyright ©2015-2018 SoftWx, Inc.
+﻿// Copyright ©2015-2026 SoftWx, Inc.
 // Released under the MIT License the text of which appears at the end of this file.
 // <authors> Steve Hatchett
 
@@ -8,28 +8,27 @@ namespace SoftWx.Match {
     /// <summary>The Similarity class provides threadsafe static methods that compute a
     /// normalized value of similarity between two strings.</summary>
     /// <remarks>The methods are static versions of methods from classes that implement
-    /// the ISimilarity interface. In general (although not neccessarily) these static
+    /// the ISimilarity interface. In general (although not necessarily) these static
     /// methods will be about the same speed or slightly faster than the methods of
-    /// IDistance instantiated classes, but these static methods will usually be less
+    /// ISimilarity instantiated classes, but these static methods will usually be less
     /// memory efficient.</remarks>
     public static class Similarity {
         /// <summary>Return Levenshtein similarity between two strings (1 - (levenshtein distance / len of longer string)).</summary>
         /// <param name="string1">One of the strings to compare.</param>
         /// <param name="string2">The other string to compare.</param>
         /// <returns>The degree of similarity 0 to 1.0, where 0 represents a lack of any
-        /// noteable similarity, and 1 represents equivalent strings.</returns>
-        public static double Levenshtein(string string1, string string2) {
+        /// notable similarity, and 1 represents equivalent strings.</returns>
+        public static double Levenshtein(string? string1, string? string2) {
             if (string1 == null) return (string2 == null) ? 1 : 0;
             if (string2 == null) return 0;
 
             // if strings of different lengths, ensure shorter string is in string1. This can result in a little
             // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) { var t = string1; string1 = string2; string2 = t; }
+            if (string1.Length > string2.Length) (string1, string2) = (string2, string1);
 
             // identify common suffix and/or prefix that can be ignored
-            int len1, len2, start;
-            Helpers.PrefixSuffixPrep(string1, string2, out len1, out len2, out start);
-            if (len1 == 0) return 1.0;
+            Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
+            if (len1 == 0) return (len2 == 0) ? 1.0 : len2.ToSimilarity(string2.Length);
 
             return Match.Levenshtein.Distance(string1, string2, len1, len2, start, new int[len2])
                 .ToSimilarity(string2.Length);
@@ -41,24 +40,25 @@ namespace SoftWx.Match {
         /// <param name="minSimilarity">The minimum similarity that is of interest.</param>
         /// <returns>The degree of similarity 0 to 1.0, where -1 represents a similarity
         /// lower than minSimilarity, otherwise, a number between 0 and 1.0 where 0
-        /// represents a lack of any noteable similarity, and 1 represents equivalent
+        /// represents a lack of any notable similarity, and 1 represents equivalent
         /// strings.</returns>
-        public static double Levenshtein(string string1, string string2, double minSimilarity) {
-            if (minSimilarity < 0 || minSimilarity > 1) throw new ArgumentException("minSimilarity must be in range 0 to 1.0");
+        public static double Levenshtein(string? string1, string? string2, double minSimilarity) {
+            if (double.IsNaN(minSimilarity) || minSimilarity < 0 || minSimilarity > 1) {
+                throw new ArgumentOutOfRangeException(nameof(minSimilarity), minSimilarity, "minSimilarity must be in range 0 to 1.0");
+            }
             if (string1 == null || string2 == null) return Helpers.NullSimilarityResults(string1, string2, minSimilarity);
 
             // if strings of different lengths, ensure shorter string is in string1. This can result in a little
             // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) { var t = string1; string1 = string2; string2 = t; }
+            if (string1.Length > string2.Length) (string1, string2) = (string2, string1);
 
             int iMaxDistance = minSimilarity.ToDistance(string2.Length);
             if (string2.Length - string1.Length > iMaxDistance) return -1;
             if (iMaxDistance == 0) return (string1 == string2) ? 1 : -1;
 
             // identify common suffix and/or prefix that can be ignored
-            int len1, len2, start;
-            Helpers.PrefixSuffixPrep(string1, string2, out len1, out len2, out start);
-            if (len1 == 0) return 1.0;
+            Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
+            if (len1 == 0) return (len2 == 0) ? 1.0 : len2.ToSimilarity(string2.Length);
 
             if (iMaxDistance < len2) {
                 return Match.Levenshtein.Distance(string1, string2, len1, len2, start, iMaxDistance, new int[len2])
@@ -67,24 +67,24 @@ namespace SoftWx.Match {
             return Match.Levenshtein.Distance(string1, string2, len1, len2, start, new int[len2])
                 .ToSimilarity(string2.Length);
         }
+
         /// <summary>Return Damerau-Levenshtein optimal string alignment similarity
         /// between two strings (1 - (damerau distance / len of longer string)).</summary>
         /// <param name="string1">One of the strings to compare.</param>
         /// <param name="string2">The other string to compare.</param>
         /// <returns>The degree of similarity 0 to 1.0, where 0 represents a lack of any
-        /// noteable similarity, and 1 represents equivalent strings.</returns>
-        public static double DamerauOSA(string string1, string string2) {
-            if (string1 == null) return (string2 == null) ? 0 : 1;
-            if (string2 == null) return 1;
+        /// notable similarity, and 1 represents equivalent strings.</returns>
+        public static double DamerauOSA(string? string1, string? string2) {
+            if (string1 == null) return (string2 == null) ? 1 : 0;
+            if (string2 == null) return 0;
 
             // if strings of different lengths, ensure shorter string is in string1. This can result in a little
             // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) { var t = string1; string1 = string2; string2 = t; }
+            if (string1.Length > string2.Length) (string1, string2) = (string2, string1);
 
             // identify common suffix and/or prefix that can be ignored
-            int len1, len2, start;
-            Helpers.PrefixSuffixPrep(string1, string2, out len1, out len2, out start);
-            if (len1 == 0) return 1.0;
+            Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
+            if (len1 == 0) return (len2 == 0) ? 1.0 : len2.ToSimilarity(string2.Length);
 
             return Match.DamerauOSA.Distance(string1, string2, len1, len2, start, new int[len2], new int[len2])
                 .ToSimilarity(string2.Length);
@@ -97,24 +97,25 @@ namespace SoftWx.Match {
         /// <param name="minSimilarity">The minimum similarity that is of interest.</param>
         /// <returns>The degree of similarity 0 to 1.0, where -1 represents a similarity
         /// lower than minSimilarity, otherwise, a number between 0 and 1.0 where 0
-        /// represents a lack of any noteable similarity, and 1 represents equivalent
+        /// represents a lack of any notable similarity, and 1 represents equivalent
         /// strings.</returns>
-        public static double DamerauOSA(string string1, string string2, double minSimilarity) {
-            if (minSimilarity < 0 || minSimilarity > 1) throw new ArgumentException("minSimilarity must be in range 0 to 1.0");
+        public static double DamerauOSA(string? string1, string? string2, double minSimilarity) {
+            if (double.IsNaN(minSimilarity) || minSimilarity < 0 || minSimilarity > 1) {
+                throw new ArgumentOutOfRangeException(nameof(minSimilarity), minSimilarity, "minSimilarity must be in range 0 to 1.0");
+            }
             if (string1 == null || string2 == null) return Helpers.NullSimilarityResults(string1, string2, minSimilarity);
 
             // if strings of different lengths, ensure shorter string is in string1. This can result in a little
             // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) { var t = string1; string1 = string2; string2 = t; }
+            if (string1.Length > string2.Length) (string1, string2) = (string2, string1);
 
             int iMaxDistance = minSimilarity.ToDistance(string2.Length);
             if (string2.Length - string1.Length > iMaxDistance) return -1;
             if (iMaxDistance == 0) return (string1 == string2) ? 1 : -1;
 
             // identify common suffix and/or prefix that can be ignored
-            int len1, len2, start;
-            Helpers.PrefixSuffixPrep(string1, string2, out len1, out len2, out start);
-            if (len1 == 0) return 1.0;
+            Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
+            if (len1 == 0) return (len2 == 0) ? 1.0 : len2.ToSimilarity(string2.Length);
 
             if (iMaxDistance < len2) {
                 return Match.DamerauOSA.Distance(string1, string2, len1, len2, start, iMaxDistance, new int[len2], new int[len2])

@@ -1,4 +1,4 @@
-﻿// Copyright ©2015-2018 SoftWx, Inc.
+﻿// Copyright ©2015-2026 SoftWx, Inc.
 // Released under the MIT License the text of which appears at the end of this file.
 // <authors> Steve Hatchett
 
@@ -6,7 +6,7 @@ namespace SoftWx.Match {
     /// <summary>The Distance class provides threadsafe static methods that compute the
     /// distance between two strings.</summary>
     /// <remarks>The methods are static versions of methods from classes that implement
-    /// the IDistance interface. In general (although not neccessarily) these static
+    /// the IDistance interface. In general (although not necessarily) these static
     /// methods will be about the same speed or slightly faster than the methods of
     /// IDistance instantiated classes, but these static methods will usually be less
     /// memory efficient. Note that since the methods in this class are not implementations
@@ -26,17 +26,16 @@ namespace SoftWx.Match {
         /// <param name="string2">The other string to compare.</param>
         /// <returns>0 if the strings are equivalent, otherwise a positive number whose
         /// magnitude increases as difference between the strings increases.</returns>
-        public static int Levenshtein(this string string1, string string2) {
-            if (string1 == null) return (string2 ?? "").Length;
+        public static int Levenshtein(this string? string1, string? string2) {
+            if (string1 == null) return (string2 ?? string.Empty).Length;
             if (string2 == null) return string1.Length;
 
             // if strings of different lengths, ensure shorter string is in string1. This can result in a little
             // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) { var t = string1; string1 = string2; string2 = t; }
+            if (string1.Length > string2.Length) (string1, string2) = (string2, string1);
 
             // identify common suffix and/or prefix that can be ignored
-            int len1, len2, start;
-            Helpers.PrefixSuffixPrep(string1, string2, out len1, out len2, out start);
+            Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
             if (len1 == 0) return len2;
 
             return Match.Levenshtein.Distance(string1, string2, len1, len2, start, new int[len2]);
@@ -51,18 +50,17 @@ namespace SoftWx.Match {
         /// <returns>-1 if the distance is greater than the maxDistance, 0 if the strings
         /// are equivalent, otherwise a positive number whose magnitude increases as
         /// difference between the strings increases.</returns>
-        public static int Levenshtein(this string string1, string string2, int maxDistance) {
+        public static int Levenshtein(this string? string1, string? string2, int maxDistance) {
             if (string1 == null || string2 == null) return Helpers.NullDistanceResults(string1, string2, maxDistance);
             if (maxDistance <= 0) return (string1 == string2) ? 0 : -1;
 
             // if strings of different lengths, ensure shorter string is in string1. This can result in a little
             // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) { var t = string1; string1 = string2; string2 = t; }
+            if (string1.Length > string2.Length) (string1, string2) = (string2, string1);
             if (string2.Length - string1.Length > maxDistance) return -1;
 
             // identify common suffix and/or prefix that can be ignored
-            int len1, len2, start;
-            Helpers.PrefixSuffixPrep(string1, string2, out len1, out len2, out start);
+            Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
             if (len1 == 0) return (len2 <= maxDistance) ? len2 : -1;
 
             if (maxDistance < len2) {
@@ -79,17 +77,16 @@ namespace SoftWx.Match {
         /// <param name="string2">The other string to compare.</param>
         /// <returns>0 if the strings are equivalent, otherwise a positive number whose
         /// magnitude increases as difference between the strings increases.</returns>
-        public static int DamerauOSA(this string string1, string string2) {
-            if (string1 == null) return (string2 ?? "").Length;
+        public static int DamerauOSA(this string? string1, string? string2) {
+            if (string1 == null) return (string2 ?? string.Empty).Length;
             if (string2 == null) return string1.Length;
 
             // if strings of different lengths, ensure shorter string is in string1. This can result in a little
             // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) { var t = string1; string1 = string2; string2 = t; }
+            if (string1.Length > string2.Length) (string1, string2) = (string2, string1);
 
             // identify common suffix and/or prefix that can be ignored
-            int len1, len2, start;
-            Helpers.PrefixSuffixPrep(string1, string2, out len1, out len2, out start);
+            Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
             if (len1 == 0) return len2;
 
             return Match.DamerauOSA.Distance(string1, string2, len1, len2, start, new int[len2], new int[len2]);
@@ -105,18 +102,17 @@ namespace SoftWx.Match {
         /// <returns>-1 if the distance is greater than the maxDistance, 0 if the strings
         /// are equivalent, otherwise a positive number whose magnitude increases as
         /// difference between the strings increases.</returns>
-        public static int DamerauOSA(this string string1, string string2, int maxDistance) {
+        public static int DamerauOSA(this string? string1, string? string2, int maxDistance) {
             if (string1 == null || string2 == null) return Helpers.NullDistanceResults(string1, string2, maxDistance);
             if (maxDistance <= 0) return (string1 == string2) ? 0 : -1;
 
             // if strings of different lengths, ensure shorter string is in string1. This can result in a little
             // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) { var t = string1; string1 = string2; string2 = t; }
+            if (string1.Length > string2.Length) (string1, string2) = (string2, string1);
             if (string2.Length - string1.Length > maxDistance) return -1;
 
             // identify common suffix and/or prefix that can be ignored
-            int len1, len2, start;
-            Helpers.PrefixSuffixPrep(string1, string2, out len1, out len2, out start);
+            Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
             if (len1 == 0) return (len2 <= maxDistance) ? len2 : -1;
 
             if (maxDistance < len2) {

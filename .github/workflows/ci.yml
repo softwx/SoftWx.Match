@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  build-and-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore SoftWx.Match.sln
+
+      - name: Build
+        run: dotnet build SoftWx.Match.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test SoftWx.Match.Test/SoftWx.Match.Test.csproj --configuration Release --no-build --verbosity normal
+
+      - name: Pack
+        run: dotnet pack SoftWx.Match/SoftWx.Match.csproj --configuration Release --no-build --output ./artifacts
+

@@ -1,4 +1,4 @@
-﻿// Copyright ©2015-2018 SoftWx, Inc.
+﻿// Copyright ©2015-2026 SoftWx, Inc.
 // Released under the MIT License the text of which appears at the end of this file.
 // <authors> Steve Hatchett
 
@@ -10,8 +10,8 @@ namespace SoftWx.Match {
         /// <param name="string1">One of the strings to compare.</param>
         /// <param name="string2">The other string to compare.</param>
         /// <returns>The degree of similarity 0 to 1.0, where 0 represents a lack of any
-        /// noteable similarity, and 1 represents equivalent strings.</returns>
-        double Similarity(string string1, string string2);
+        /// notable similarity, and 1 represents equivalent strings.</returns>
+        double Similarity(string? string1, string? string2);
 
         /// <summary>Return a measure of the similarity between two strings.</summary>
         /// <param name="string1">One of the strings to compare.</param>
@@ -19,9 +19,9 @@ namespace SoftWx.Match {
         /// <param name="minSimilarity">The minimum similarity that is of interest.</param>
         /// <returns>The degree of similarity 0 to 1.0, where -1 represents a similarity
         /// lower than minSimilarity, otherwise, a number between 0 and 1.0 where 0
-        /// represents a lack of any noteable similarity, and 1 represents equivalent
+        /// represents a lack of any notable similarity, and 1 represents equivalent
         /// strings.</returns>
-        double Similarity(string string1, string string2, double minSimilarity);
+        double Similarity(string? string1, string? string2, double minSimilarity);
     }
 }
 /*
