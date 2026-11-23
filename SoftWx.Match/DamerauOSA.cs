@@ -132,7 +132,7 @@ namespace SoftWx.Match {
 
             // identify common suffix and/or prefix that can be ignored
             Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
-            if (len1 == 0) return (len2 <= iMaxDistance) ? len2 : -1;
+            if (len1 == 0) return len2;
             if (iMaxDistance == 1) {
                 return (len2 == 1 || Helpers.IsSingleTransposition(string1, string2, len1, len2, start)) ? 1 : -1;
             }
@@ -280,7 +280,7 @@ namespace SoftWx.Match {
             if (string2.Length - string1.Length > iMaxDistance) return -1;
 
             Helpers.PrefixSuffixPrep(ref string1, ref string2);
-            if (string1.Length == 0) return (string2.Length <= iMaxDistance) ? string2.Length : -1;
+            if (string1.Length == 0) return string2.Length;
             // After PrefixSuffixPrep both ends differ, so distance can only be 1 if len2 == 1 (1 substitution)
             // or both trimmed spans are 2 transposed chars.
             if (iMaxDistance == 1) {
@@ -538,7 +538,7 @@ namespace SoftWx.Match {
                 // cell already exceeds maxDistance, the final distance must also exceed maxDistance.
                 if (char1Costs[i + lenDiff] > maxDistance) return -1;
             }
-            return (currentCost <= maxDistance) ? currentCost : -1;
+            return currentCost;
         }
 #else
         // Reuses instance buffers up to maxCachedLength; uses transient arrays for oversized inputs.
@@ -694,7 +694,7 @@ namespace SoftWx.Match {
                 // Diagonal values are monotonically non-decreasing, so exceeding maxDistance here guarantees failure.
                 if (char1Costs[i + lenDiff] > maxDistance) return -1;
             }
-            return (currentCost <= maxDistance) ? currentCost : -1;
+            return currentCost;
         }
 #endif
     }

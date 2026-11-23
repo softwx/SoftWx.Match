@@ -120,9 +120,27 @@ namespace SoftWx.Match.Test {
             Assert.AreEqual(-1, ed.Distance("a", "bc", 1.5));
             Assert.AreEqual(2, ed.Distance("a", "bc", 2.9));
             Assert.AreEqual(2, ed.Distance("a", "bc", double.PositiveInfinity));
+            Assert.AreEqual(2, ed.Distance("a", "bc", (double)int.MaxValue + 1));
+            Assert.AreEqual(0, ed.Distance("abc", "abc", -1.5));
+            Assert.AreEqual(-1, ed.Distance("abc", "abd", -1.5));
+            Assert.AreEqual(0, ed.Distance("abc", "abc", double.NegativeInfinity));
+            Assert.AreEqual(-1, ed.Distance("abc", "abd", double.NegativeInfinity));
+            Assert.AreEqual(0, ed.Distance("abc", "abc", (double)int.MinValue - 1));
+            Assert.AreEqual(-1, ed.Distance("abc", "abd", (double)int.MinValue - 1));
+            Assert.AreEqual(0, ed.Distance(null, null, double.NegativeInfinity));
+            Assert.AreEqual(-1, ed.Distance(null, "", double.NegativeInfinity));
+            Assert.AreEqual(-1, ed.Distance("", null, double.NegativeInfinity));
             Assert.AreEqual(-1, ed.Distance("a", "a", double.NaN));
             Assert.AreEqual(-1, ed.Distance("a", "b", double.NaN));
             Assert.AreEqual(-1, ed.Distance(null, null, double.NaN));
+
+            Assert.AreEqual(0, Distance.Levenshtein("abc", "abc", -1));
+            Assert.AreEqual(-1, Distance.Levenshtein("abc", "abd", -1));
+            Assert.AreEqual(0, Distance.Levenshtein("abc", "abc", int.MinValue));
+            Assert.AreEqual(-1, Distance.Levenshtein("abc", "abd", int.MinValue));
+            Assert.AreEqual(0, Distance.Levenshtein(null, null, -1));
+            Assert.AreEqual(-1, Distance.Levenshtein(null, "", -1));
+            Assert.AreEqual(-1, Distance.Levenshtein("", null, -1));
         }
 
         [TestMethod]
@@ -354,7 +372,15 @@ namespace SoftWx.Match.Test {
             Assert.AreEqual(-1, Distance.Levenshtein(slice1, slice2, 2));
             Assert.AreEqual(1, ed.Distance("a".AsSpan(), "b".AsSpan(), 1.5));
             Assert.AreEqual(-1, ed.Distance("a".AsSpan(), "bc".AsSpan(), 1.5));
+            Assert.AreEqual(2, ed.Distance("a".AsSpan(), "bc".AsSpan(), double.PositiveInfinity));
+            Assert.AreEqual(2, ed.Distance("a".AsSpan(), "bc".AsSpan(), (double)int.MaxValue + 1));
+            Assert.AreEqual(0, ed.Distance("abc".AsSpan(), "abc".AsSpan(), double.NegativeInfinity));
+            Assert.AreEqual(-1, ed.Distance("abc".AsSpan(), "abd".AsSpan(), double.NegativeInfinity));
+            Assert.AreEqual(0, ed.Distance("abc".AsSpan(), "abc".AsSpan(), (double)int.MinValue - 1));
+            Assert.AreEqual(-1, ed.Distance("abc".AsSpan(), "abd".AsSpan(), (double)int.MinValue - 1));
             Assert.AreEqual(-1, ed.Distance("a".AsSpan(), "a".AsSpan(), double.NaN));
+            Assert.AreEqual(0, Distance.Levenshtein("abc".AsSpan(), "abc".AsSpan(), -1));
+            Assert.AreEqual(-1, Distance.Levenshtein("abc".AsSpan(), "abd".AsSpan(), -1));
 
             Assert.AreEqual(0.4, ed.Similarity(slice1, slice2), 1e-12);
             Assert.AreEqual(0.4, Similarity.Levenshtein(slice1, slice2), 1e-12);
@@ -369,9 +395,38 @@ namespace SoftWx.Match.Test {
             Assert.AreEqual(0.5, ed.Similarity("a".AsSpan(), "ab".AsSpan()));
 
             Assert.ThrowsException<ArgumentOutOfRangeException>(() => ed.Similarity("a".AsSpan(), "b".AsSpan(), -0.1));
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() => ed.Similarity("a".AsSpan(), "b".AsSpan(), 1.1));
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() => ed.Similarity("a".AsSpan(), "b".AsSpan(), double.NaN));
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() => Similarity.Levenshtein("a".AsSpan(), "b".AsSpan(), -0.1));
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() => Similarity.Levenshtein("a".AsSpan(), "b".AsSpan(), 1.1));
             Assert.ThrowsException<ArgumentOutOfRangeException>(() => Similarity.Levenshtein("a".AsSpan(), "b".AsSpan(), double.NaN));
         }
 #endif
+
+        [TestMethod]
+        public void LevBoundedShouldHandleLongerStringsWithCommonPrefix() {
+            var ed = new Levenshtein();
+            (string s1, string s2)[] pairs = [
+                ("pppabxcdye", "pppazxcdwf"),
+                ("pppabxcdye", "pppazxcdwfg"),
+                ("pppabcdefgsss", "pppxbcdefysss"),
+                ("prefix_kitten_end", "prefix_sitting_end"),
+            ];
+
+            foreach (var (s1, s2) in pairs) {
+                for (int maxDist = 0; maxDist <= 6; maxDist++) {
+                    int expected = EditDistanceReference.RefLevenshtein(s1, s2, maxDist);
+                    Assert.AreEqual(expected, (int)ed.Distance(s1, s2, maxDist), $"s1='{s1}', s2='{s2}', max={maxDist}");
+                    Assert.AreEqual(expected, Distance.Levenshtein(s1, s2, maxDist), $"s1='{s1}', s2='{s2}', max={maxDist}");
+                }
+
+                foreach (double minSim in new[] { 0.5, 0.7, 0.8, 0.9 }) {
+                    double expectedSim = EditDistanceReference.RefLevenshteinSimilarity(s1, s2, minSim);
+                    Assert.AreEqual(expectedSim, ed.Similarity(s1, s2, minSim), 1e-12, $"s1='{s1}', s2='{s2}', min={minSim}");
+                    Assert.AreEqual(expectedSim, Similarity.Levenshtein(s1, s2, minSim), 1e-12, $"s1='{s1}', s2='{s2}', min={minSim}");
+                }
+            }
+        }
 
         [TestMethod]
         public void LevShouldHandleStringsExceedingMaxCachedBufferLength() {
@@ -383,11 +438,15 @@ namespace SoftWx.Match.Test {
             Assert.AreEqual(2, ed.Distance(s1, s2, 2));
             Assert.AreEqual(-1, ed.Distance(s1, s2, 1));
             Assert.AreEqual(1.0 - (2.0 / 600), ed.Similarity(s1, s2), 1e-12);
+            Assert.AreEqual(1.0 - (2.0 / 600), ed.Similarity(s1, s2, 0.99), 1e-12);
+            Assert.AreEqual(1.0 - (2.0 / 600), Similarity.Levenshtein(s1, s2), 1e-12);
+            Assert.AreEqual(1.0 - (2.0 / 600), Similarity.Levenshtein(s1, s2, 0.99), 1e-12);
             // Subsequent short comparisons continue to work cleanly.
             Assert.AreEqual(6, ed.Distance("flintstone", "hanson"));
 
             var preSized = new Levenshtein(700);
             Assert.AreEqual(2, preSized.Distance(s1, s2));
+            Assert.AreEqual(2, preSized.Distance(s1, s2, 2));
             Assert.AreEqual(2, Distance.Levenshtein(s1, s2));
             Assert.AreEqual(2, Distance.Levenshtein(s1, s2, 2));
         }

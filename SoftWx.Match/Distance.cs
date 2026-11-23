@@ -73,7 +73,7 @@ namespace SoftWx.Match {
 
             // identify common suffix and/or prefix that can be ignored
             Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
-            if (len1 == 0) return (len2 <= maxDistance) ? len2 : -1;
+            if (len1 == 0) return len2;
             if (maxDistance == 1) return (len2 == 1) ? 1 : -1;
             if (len1 == 1) {
                 int dist = Helpers.SingleCharDistance(string1, string2, len2, start);
@@ -138,7 +138,7 @@ namespace SoftWx.Match {
 
             // identify common suffix and/or prefix that can be ignored
             Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
-            if (len1 == 0) return (len2 <= maxDistance) ? len2 : -1;
+            if (len1 == 0) return len2;
             if (maxDistance == 1) {
                 return (len2 == 1 || Helpers.IsSingleTransposition(string1, string2, len1, len2, start)) ? 1 : -1;
             }
@@ -196,7 +196,7 @@ namespace SoftWx.Match {
             if (string2.Length - string1.Length > maxDistance) return -1;
 
             Helpers.PrefixSuffixPrep(ref string1, ref string2);
-            if (string1.Length == 0) return (string2.Length <= maxDistance) ? string2.Length : -1;
+            if (string1.Length == 0) return string2.Length;
             // After PrefixSuffixPrep both ends differ, so distance == 1 iff both trimmed spans have length 1.
             if (maxDistance == 1) return (string2.Length == 1) ? 1 : -1;
             if (string1.Length == 1) {
@@ -253,7 +253,7 @@ namespace SoftWx.Match {
             if (string2.Length - string1.Length > maxDistance) return -1;
 
             Helpers.PrefixSuffixPrep(ref string1, ref string2);
-            if (string1.Length == 0) return (string2.Length <= maxDistance) ? string2.Length : -1;
+            if (string1.Length == 0) return string2.Length;
             // After PrefixSuffixPrep both ends differ, so distance == 1 iff len2 == 1 or a 2-char transposition.
             if (maxDistance == 1) {
                 return (string2.Length == 1 || Helpers.IsSingleTransposition(string1, string2)) ? 1 : -1;
