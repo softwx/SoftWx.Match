@@ -15,6 +15,7 @@
     <PackageReleaseNotes>v3.0.0
 - Multi-targeted for netstandard2.0, net8.0, and net10.0 (dropped netstandard1.0)
 - Enabled nullable reference types, trimming/NativeAOT compatibility, and built-in Source Link
+- Added ReadOnlySpan&lt;char&gt; overloads (net8.0+), zero-allocation static methods (stackalloc/ArrayPool), lazy maxDistance initialization, SIMD CommonPrefixLength, and O(1) fast paths
 - Fixed Similarity returning 1.0 when one string is a prefix or suffix of the other
 - Fixed inverted null handling in Similarity.DamerauOSA and Helpers.NullSimilarityResults
 - Fixed fractional and NaN maxDistance handling in Levenshtein.Distance and DamerauOSA.Distance

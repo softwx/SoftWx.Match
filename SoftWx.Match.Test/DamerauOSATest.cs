@@ -340,6 +340,38 @@ namespace SoftWx.Match.Test {
                 }
             });
         }
+
+        [TestMethod]
+        public void DamerauOSASpanOverloadsShouldMatchStringOverloads() {
+            var ed = new DamerauOSA();
+            ReadOnlySpan<char> slice1 = "xx1234yy".AsSpan(2, 4);
+            ReadOnlySpan<char> slice2 = "zz1324ww".AsSpan(2, 4);
+
+            Assert.AreEqual(1, ed.Distance(slice1, slice2));
+            Assert.AreEqual(1, Distance.DamerauOSA(slice1, slice2));
+            Assert.AreEqual(1, slice1.DamerauOSA(slice2));
+            Assert.AreEqual(1, slice1.DamerauOSA("1324"));
+            Assert.AreEqual(1, ed.Distance(slice1, slice2, 1));
+            Assert.AreEqual(1, Distance.DamerauOSA(slice1, slice2, 1));
+            Assert.AreEqual(-1, ed.Distance(slice1, slice2, 0.5));
+            Assert.AreEqual(-1, ed.Distance("a".AsSpan(), "bc".AsSpan(), 1.5));
+            Assert.AreEqual(-1, ed.Distance("a".AsSpan(), "a".AsSpan(), double.NaN));
+
+            Assert.AreEqual(0.75, ed.Similarity(slice1, slice2), 1e-12);
+            Assert.AreEqual(0.75, Similarity.DamerauOSA(slice1, slice2), 1e-12);
+            Assert.AreEqual(0.75, ed.Similarity(slice1, slice2, 0.75), 1e-12);
+            Assert.AreEqual(-1, ed.Similarity(slice1, slice2, 0.8));
+            Assert.AreEqual(0.75, Similarity.DamerauOSA(slice1, slice2, 0.75), 1e-12);
+            Assert.AreEqual(-1, Similarity.DamerauOSA(slice1, slice2, 0.8));
+
+            Assert.AreEqual(0, ed.Distance(ReadOnlySpan<char>.Empty, ReadOnlySpan<char>.Empty));
+            Assert.AreEqual(1.0, ed.Similarity(ReadOnlySpan<char>.Empty, ReadOnlySpan<char>.Empty));
+            Assert.AreEqual(0.0, ed.Similarity(ReadOnlySpan<char>.Empty, "abc".AsSpan()));
+            Assert.AreEqual(0.5, ed.Similarity("a".AsSpan(), "ab".AsSpan()));
+
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() => ed.Similarity("a".AsSpan(), "b".AsSpan(), 1.1));
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() => Similarity.DamerauOSA("a".AsSpan(), "b".AsSpan(), double.NaN));
+        }
     }
 }
 /*

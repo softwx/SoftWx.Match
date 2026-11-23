@@ -82,7 +82,9 @@ namespace SoftWx.Match {
         public double Distance(string? string1, string? string2) {
             if (string1 == null) return (string2 ?? string.Empty).Length;
             if (string2 == null) return string1.Length;
-
+#if NET8_0_OR_GREATER
+            return Distance(string1.AsSpan(), string2.AsSpan());
+#else
             // if strings of different lengths, ensure shorter string is in string1. This can result in a little
             // faster speed by spending more time spinning just the inner loop during the main processing.
             if (string1.Length > string2.Length) (string1, string2) = (string2, string1);
@@ -96,9 +98,6 @@ namespace SoftWx.Match {
                 this.baseChar1Costs = new int[len2];
                 this.basePrevChar1Costs = new int[len2];
             }
-#if NET8_0_OR_GREATER
-            return Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2), this.baseChar1Costs, this.basePrevChar1Costs);
-#else
             return Distance(string1, string2, len1, len2, start, this.baseChar1Costs, this.basePrevChar1Costs);
 #endif
         }
@@ -119,6 +118,9 @@ namespace SoftWx.Match {
                 : (maxDistance > int.MaxValue) ? int.MaxValue
                 : (int)Math.Floor(maxDistance);
             if (string1 == null || string2 == null) return Helpers.NullDistanceResults(string1, string2, iMaxDistance);
+#if NET8_0_OR_GREATER
+            return Distance(string1.AsSpan(), string2.AsSpan(), iMaxDistance);
+#else
             if (iMaxDistance <= 0) return (string1 == string2) ? 0 : -1;
 
             // if strings of different lengths, ensure shorter string is in string1. This can result in a little
@@ -141,12 +143,6 @@ namespace SoftWx.Match {
                 this.baseChar1Costs = new int[len2];
                 this.basePrevChar1Costs = new int[len2];
             }
-#if NET8_0_OR_GREATER
-            if (iMaxDistance < len2) {
-                return Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2), iMaxDistance, this.baseChar1Costs, this.basePrevChar1Costs);
-            }
-            return Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2), this.baseChar1Costs, this.basePrevChar1Costs);
-#else
             if (iMaxDistance < len2) {
                 return Distance(string1, string2, len1, len2, start, iMaxDistance, this.baseChar1Costs, this.basePrevChar1Costs);
             }
@@ -163,7 +159,9 @@ namespace SoftWx.Match {
         public double Similarity(string? string1, string? string2) {
             if (string1 == null) return (string2 == null) ? 1 : 0;
             if (string2 == null) return 0;
-
+#if NET8_0_OR_GREATER
+            return Similarity(string1.AsSpan(), string2.AsSpan());
+#else
             // if strings of different lengths, ensure shorter string is in string1. This can result in a little
             // faster speed by spending more time spinning just the inner loop during the main processing.
             if (string1.Length > string2.Length) (string1, string2) = (string2, string1);
@@ -177,10 +175,6 @@ namespace SoftWx.Match {
                 this.baseChar1Costs = new int[len2];
                 this.basePrevChar1Costs = new int[len2];
             }
-#if NET8_0_OR_GREATER
-            return Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2), this.baseChar1Costs, this.basePrevChar1Costs)
-                .ToSimilarity(string2.Length);
-#else
             return Distance(string1, string2, len1, len2, start, this.baseChar1Costs, this.basePrevChar1Costs)
                 .ToSimilarity(string2.Length);
 #endif
@@ -200,7 +194,9 @@ namespace SoftWx.Match {
                 throw new ArgumentOutOfRangeException(nameof(minSimilarity), minSimilarity, "minSimilarity must be in range 0 to 1.0");
             }
             if (string1 == null || string2 == null) return Helpers.NullSimilarityResults(string1, string2, minSimilarity);
-
+#if NET8_0_OR_GREATER
+            return Similarity(string1.AsSpan(), string2.AsSpan(), minSimilarity);
+#else
             // if strings of different lengths, ensure shorter string is in string1. This can result in a little
             // faster speed by spending more time spinning just the inner loop during the main processing.
             if (string1.Length > string2.Length) (string1, string2) = (string2, string1);
@@ -226,14 +222,6 @@ namespace SoftWx.Match {
                 this.baseChar1Costs = new int[len2];
                 this.basePrevChar1Costs = new int[len2];
             }
-#if NET8_0_OR_GREATER
-            if (iMaxDistance < len2) {
-                return Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2), iMaxDistance, this.baseChar1Costs, this.basePrevChar1Costs)
-                    .ToSimilarity(string2.Length);
-            }
-            return Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2), this.baseChar1Costs, this.basePrevChar1Costs)
-                .ToSimilarity(string2.Length);
-#else
             if (iMaxDistance < len2) {
                 return Distance(string1, string2, len1, len2, start, iMaxDistance, this.baseChar1Costs, this.basePrevChar1Costs)
                     .ToSimilarity(string2.Length);
@@ -244,8 +232,158 @@ namespace SoftWx.Match {
         }
 
 #if NET8_0_OR_GREATER
+        /// <summary>Compute and return the Damerau-Levenshtein optimal string
+        /// alignment edit distance between two character spans.</summary>
+        /// <remarks>https://github.com/softwx/SoftWx.Match
+        /// This method is not threadsafe.</remarks>
+        /// <param name="string1">One of the character spans to compare.</param>
+        /// <param name="string2">The other character span to compare.</param>
+        /// <returns>0 if the spans are equivalent, otherwise a positive number whose
+        /// magnitude increases as difference between the spans increases.</returns>
+        public double Distance(ReadOnlySpan<char> string1, ReadOnlySpan<char> string2) {
+            if (string1.Length > string2.Length) {
+                ReadOnlySpan<char> t = string1;
+                string1 = string2;
+                string2 = t;
+            }
+
+            Helpers.PrefixSuffixPrep(ref string1, ref string2);
+            if (string1.Length == 0) return string2.Length;
+            if (string1.Length == 1) return Helpers.SingleCharDistance(string1, string2);
+
+            int len2 = string2.Length;
+            if (len2 > this.baseChar1Costs.Length) {
+                this.baseChar1Costs = new int[len2];
+                this.basePrevChar1Costs = new int[len2];
+            }
+            return Distance(string1, string2, this.baseChar1Costs, this.basePrevChar1Costs);
+        }
+
+        /// <summary>Compute and return the Damerau-Levenshtein optimal string
+        /// alignment edit distance between two character spans.</summary>
+        /// <remarks>https://github.com/softwx/SoftWx.Match
+        /// This method is not threadsafe.</remarks>
+        /// <param name="string1">One of the character spans to compare.</param>
+        /// <param name="string2">The other character span to compare.</param>
+        /// <param name="maxDistance">The maximum distance that is of interest.</param>
+        /// <returns>-1 if the distance is greater than the maxDistance, 0 if the spans
+        /// are equivalent, otherwise a positive number whose magnitude increases as
+        /// difference between the spans increases.</returns>
+        public double Distance(ReadOnlySpan<char> string1, ReadOnlySpan<char> string2, double maxDistance) {
+            if (double.IsNaN(maxDistance)) return -1;
+            int iMaxDistance = (maxDistance < int.MinValue) ? int.MinValue
+                : (maxDistance > int.MaxValue) ? int.MaxValue
+                : (int)Math.Floor(maxDistance);
+            return Distance(string1, string2, iMaxDistance);
+        }
+
+        private int Distance(ReadOnlySpan<char> string1, ReadOnlySpan<char> string2, int iMaxDistance) {
+            if (iMaxDistance <= 0) return string1.SequenceEqual(string2) ? 0 : -1;
+
+            if (string1.Length > string2.Length) {
+                ReadOnlySpan<char> t = string1;
+                string1 = string2;
+                string2 = t;
+            }
+            if (string2.Length - string1.Length > iMaxDistance) return -1;
+
+            Helpers.PrefixSuffixPrep(ref string1, ref string2);
+            if (string1.Length == 0) return (string2.Length <= iMaxDistance) ? string2.Length : -1;
+            if (iMaxDistance == 1) {
+                return (string2.Length == 1 || Helpers.IsSingleTransposition(string1, string2)) ? 1 : -1;
+            }
+            if (string1.Length == 1) {
+                int dist = Helpers.SingleCharDistance(string1, string2);
+                return (dist <= iMaxDistance) ? dist : -1;
+            }
+
+            int len2 = string2.Length;
+            if (len2 > this.baseChar1Costs.Length) {
+                this.baseChar1Costs = new int[len2];
+                this.basePrevChar1Costs = new int[len2];
+            }
+            if (iMaxDistance < len2) {
+                return Distance(string1, string2, iMaxDistance, this.baseChar1Costs, this.basePrevChar1Costs);
+            }
+            return Distance(string1, string2, this.baseChar1Costs, this.basePrevChar1Costs);
+        }
+
+        /// <summary>Return Damerau-Levenshtein optimal string alignment similarity
+        /// between two character spans (1 - (damerau distance / len of longer span)).</summary>
+        /// <param name="string1">One of the character spans to compare.</param>
+        /// <param name="string2">The other character span to compare.</param>
+        /// <returns>The degree of similarity 0 to 1.0, where 0 represents a lack of any
+        /// notable similarity, and 1 represents equivalent spans.</returns>
+        public double Similarity(ReadOnlySpan<char> string1, ReadOnlySpan<char> string2) {
+            if (string1.Length > string2.Length) {
+                ReadOnlySpan<char> t = string1;
+                string1 = string2;
+                string2 = t;
+            }
+            int maxLen = string2.Length;
+
+            Helpers.PrefixSuffixPrep(ref string1, ref string2);
+            if (string1.Length == 0) return (string2.Length == 0) ? 1.0 : string2.Length.ToSimilarity(maxLen);
+            if (string1.Length == 1) return Helpers.SingleCharDistance(string1, string2).ToSimilarity(maxLen);
+
+            int len2 = string2.Length;
+            if (len2 > this.baseChar1Costs.Length) {
+                this.baseChar1Costs = new int[len2];
+                this.basePrevChar1Costs = new int[len2];
+            }
+            return Distance(string1, string2, this.baseChar1Costs, this.basePrevChar1Costs).ToSimilarity(maxLen);
+        }
+
+        /// <summary>Return Damerau-Levenshtein optimal string alignment similarity
+        /// between two character spans (1 - (damerau distance / len of longer span)).</summary>
+        /// <param name="string1">One of the character spans to compare.</param>
+        /// <param name="string2">The other character span to compare.</param>
+        /// <param name="minSimilarity">The minimum similarity that is of interest.</param>
+        /// <returns>The degree of similarity 0 to 1.0, where -1 represents a similarity
+        /// lower than minSimilarity, otherwise, a number between 0 and 1.0 where 0
+        /// represents a lack of any notable similarity, and 1 represents equivalent
+        /// spans.</returns>
+        public double Similarity(ReadOnlySpan<char> string1, ReadOnlySpan<char> string2, double minSimilarity) {
+            if (double.IsNaN(minSimilarity) || minSimilarity < 0 || minSimilarity > 1) {
+                throw new ArgumentOutOfRangeException(nameof(minSimilarity), minSimilarity, "minSimilarity must be in range 0 to 1.0");
+            }
+
+            if (string1.Length > string2.Length) {
+                ReadOnlySpan<char> t = string1;
+                string1 = string2;
+                string2 = t;
+            }
+            int maxLen = string2.Length;
+
+            int iMaxDistance = minSimilarity.ToDistance(maxLen);
+            if (maxLen - string1.Length > iMaxDistance) return -1;
+            if (iMaxDistance <= 0) return string1.SequenceEqual(string2) ? 1 : -1;
+
+            Helpers.PrefixSuffixPrep(ref string1, ref string2);
+            if (string1.Length == 0) return (string2.Length == 0) ? 1.0 : string2.Length.ToSimilarity(maxLen);
+            if (iMaxDistance == 1) {
+                return (string2.Length == 1 || Helpers.IsSingleTransposition(string1, string2))
+                    ? 1.ToSimilarity(maxLen)
+                    : -1;
+            }
+            if (string1.Length == 1) {
+                int dist = Helpers.SingleCharDistance(string1, string2);
+                return (dist <= iMaxDistance) ? dist.ToSimilarity(maxLen) : -1;
+            }
+
+            int len2 = string2.Length;
+            if (len2 > this.baseChar1Costs.Length) {
+                this.baseChar1Costs = new int[len2];
+                this.basePrevChar1Costs = new int[len2];
+            }
+            if (iMaxDistance < len2) {
+                return Distance(string1, string2, iMaxDistance, this.baseChar1Costs, this.basePrevChar1Costs).ToSimilarity(maxLen);
+            }
+            return Distance(string1, string2, this.baseChar1Costs, this.basePrevChar1Costs).ToSimilarity(maxLen);
+        }
+
         /// <summary>Threadsafe internal entry point using stackalloc for short strings and ArrayPool for long strings.</summary>
-        internal static int Distance(ReadOnlySpan<char> s1, ReadOnlySpan<char> s2) {
+        internal static int DistanceCore(ReadOnlySpan<char> s1, ReadOnlySpan<char> s2) {
             if (s2.Length <= StackAllocThreshold) {
                 Span<int> char1Costs = stackalloc int[s2.Length];
                 Span<int> prevChar1Costs = stackalloc int[s2.Length];
@@ -260,7 +398,7 @@ namespace SoftWx.Match {
         }
 
         /// <summary>Threadsafe internal bounded entry point using stackalloc for short strings and ArrayPool for long strings.</summary>
-        internal static int Distance(ReadOnlySpan<char> s1, ReadOnlySpan<char> s2, int maxDistance) {
+        internal static int DistanceCore(ReadOnlySpan<char> s1, ReadOnlySpan<char> s2, int maxDistance) {
             if (s2.Length <= StackAllocThreshold) {
                 Span<int> char1Costs = stackalloc int[s2.Length];
                 Span<int> prevChar1Costs = stackalloc int[s2.Length];

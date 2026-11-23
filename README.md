@@ -57,10 +57,11 @@ double dist = ed.Distance("flintstone", "hanson");
 // Specify a maxDistance for significant speed improvements
 dist = ed.Distance("flintstone", "hanson", 2);
 
-// Thread-safe static (and string extension) methods
+// Thread-safe static (and string / ReadOnlySpan<char> extension) methods
 int staticDist = Distance.DamerauOSA("flintstone", "hanson");
 staticDist = Distance.DamerauOSA("flintstone", "hanson", 2);
 staticDist = "flintstone".DamerauOSA("hanson");
+staticDist = "flintstone".AsSpan(0, 5).DamerauOSA("hanson".AsSpan()); // .NET 8+ zero-alloc
 ```
 
 ## Similarity
@@ -112,6 +113,7 @@ dotnet run --project SoftWx.Match.Benchmark -c Release
 **v3.0.0**
 - Multi-targeted `netstandard2.0`, `net8.0`, and `net10.0` (dropped obsolete `netstandard1.0`)
 - Enabled nullable reference types, trimming/NativeAOT compatibility, .NET analyzers, and built-in Source Link with `.snupkg` symbols
+- Added `ReadOnlySpan<char>` overloads (`.NET 8+`), zero-allocation static methods (`stackalloc`/`ArrayPool`), lazy `maxDistance` initialization, SIMD `CommonPrefixLength`, and `O(1)` fast paths
 - Fixed `Similarity` returning `1.0` when one string was a prefix or suffix of the other (e.g. `""` vs `"abc"`, `"a"` vs `"ab"`)
 - Fixed inverted `null` handling in `Similarity.DamerauOSA` and `Helpers.NullSimilarityResults`
 - Fixed fractional and `NaN` `maxDistance` handling in `Levenshtein.Distance` and `DamerauOSA.Distance`

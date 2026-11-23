@@ -338,6 +338,38 @@ namespace SoftWx.Match.Test {
                 }
             });
         }
+
+        [TestMethod]
+        public void LevSpanOverloadsShouldMatchStringOverloads() {
+            var ed = new Levenshtein();
+            ReadOnlySpan<char> slice1 = "xxflintstoneyy".AsSpan(2, 10);
+            ReadOnlySpan<char> slice2 = "zzhansonww".AsSpan(2, 6);
+
+            Assert.AreEqual(6, ed.Distance(slice1, slice2));
+            Assert.AreEqual(6, Distance.Levenshtein(slice1, slice2));
+            Assert.AreEqual(6, slice1.Levenshtein(slice2));
+            Assert.AreEqual(6, slice1.Levenshtein("hanson"));
+            Assert.AreEqual(-1, ed.Distance(slice1, slice2, 2));
+            Assert.AreEqual(-1, Distance.Levenshtein(slice1, slice2, 2));
+            Assert.AreEqual(1, ed.Distance("a".AsSpan(), "b".AsSpan(), 1.5));
+            Assert.AreEqual(-1, ed.Distance("a".AsSpan(), "bc".AsSpan(), 1.5));
+            Assert.AreEqual(-1, ed.Distance("a".AsSpan(), "a".AsSpan(), double.NaN));
+
+            Assert.AreEqual(0.4, ed.Similarity(slice1, slice2), 1e-12);
+            Assert.AreEqual(0.4, Similarity.Levenshtein(slice1, slice2), 1e-12);
+            Assert.AreEqual(0.4, ed.Similarity(slice1, slice2, 0.4), 1e-12);
+            Assert.AreEqual(-1, ed.Similarity(slice1, slice2, 0.5));
+            Assert.AreEqual(0.4, Similarity.Levenshtein(slice1, slice2, 0.4), 1e-12);
+            Assert.AreEqual(-1, Similarity.Levenshtein(slice1, slice2, 0.5));
+
+            Assert.AreEqual(0, ed.Distance(ReadOnlySpan<char>.Empty, ReadOnlySpan<char>.Empty));
+            Assert.AreEqual(1.0, ed.Similarity(ReadOnlySpan<char>.Empty, ReadOnlySpan<char>.Empty));
+            Assert.AreEqual(0.0, ed.Similarity(ReadOnlySpan<char>.Empty, "abc".AsSpan()));
+            Assert.AreEqual(0.5, ed.Similarity("a".AsSpan(), "ab".AsSpan()));
+
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() => ed.Similarity("a".AsSpan(), "b".AsSpan(), -0.1));
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() => Similarity.Levenshtein("a".AsSpan(), "b".AsSpan(), double.NaN));
+        }
     }
 }
 /*

@@ -20,6 +20,46 @@ namespace SoftWx.Match {
             return (string1 == null && string2 == null) ? 1 : (0 >= minSimilarity) ? 0 : -1;
         }
 
+#if NET8_0_OR_GREATER
+        /// <summary>Trims common prefix and suffix from two spans.</summary>
+        /// <remarks>Expects span1.Length to be less than or equal to span2.Length.</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void PrefixSuffixPrep(ref ReadOnlySpan<char> span1, ref ReadOnlySpan<char> span2) {
+            int len1 = span1.Length;
+            int len2 = span2.Length;
+            int start = 0;
+            if (len1 != 0 && span1[0] == span2[0]) {
+                start = span1.CommonPrefixLength(span2);
+                if (start == len1) {
+                    span1 = ReadOnlySpan<char>.Empty;
+                    span2 = span2.Slice(start);
+                    return;
+                }
+            }
+            // suffix common to both spans can be ignored
+            while (len1 > start && span1[len1 - 1] == span2[len2 - 1]) {
+                len1--;
+                len2--;
+            }
+            span1 = span1.Slice(start, len1 - start);
+            span2 = span2.Slice(start, len2 - start);
+        }
+
+        /// <summary>Computes exact Levenshtein / DamerauOSA edit distance when span1.Length == 1 after PrefixSuffixPrep.</summary>
+        /// <remarks>Assumes span1[0] != span2[0] and span1[0] != span2[^1].</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int SingleCharDistance(ReadOnlySpan<char> span1, ReadOnlySpan<char> span2) {
+            int len2 = span2.Length;
+            if (len2 <= 2) return len2;
+            return (span2.Slice(1, len2 - 2).IndexOf(span1[0]) >= 0) ? len2 - 1 : len2;
+        }
+
+        /// <summary>Returns true if the remaining trimmed spans represent a single adjacent transposition.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsSingleTransposition(ReadOnlySpan<char> span1, ReadOnlySpan<char> span2) {
+            return span1.Length == 2 && span2.Length == 2 && span1[0] == span2[1] && span1[1] == span2[0];
+        }
+#else
         /// <summary>Calculates starting position and lengths of two strings such that common
         /// prefix and suffix substrings are excluded.</summary>
         /// <remarks>Expects string1.Length to be less than or equal to string2.Length.</remarks>
@@ -27,26 +67,6 @@ namespace SoftWx.Match {
         public static void PrefixSuffixPrep(string string1, string string2, out int len1, out int len2, out int start) {
             len2 = string2.Length;
             len1 = string1.Length; // this is also the minimum length of the two strings
-#if NET8_0_OR_GREATER
-            start = 0;
-            if (len1 != 0 && string1[0] == string2[0]) {
-                start = string1.AsSpan().CommonPrefixLength(string2);
-                if (start == len1) {
-                    len1 = 0;
-                    len2 -= start;
-                    return;
-                }
-            }
-            // suffix common to both strings can be ignored
-            while (len1 > start && string1[len1 - 1] == string2[len2 - 1]) {
-                len1--;
-                len2--;
-            }
-            if (start != 0) {
-                len2 -= start; // length of the part excluding common prefix and suffix
-                len1 -= start;
-            }
-#else
             // suffix common to both strings can be ignored
             while (len1 != 0 && string1[len1 - 1] == string2[len2 - 1]) {
                 len1--;
@@ -59,7 +79,6 @@ namespace SoftWx.Match {
                 len2 -= start; // length of the part excluding common prefix and suffix
                 len1 -= start;
             }
-#endif
         }
 
         /// <summary>Computes exact Levenshtein / DamerauOSA edit distance when len1 == 1 after PrefixSuffixPrep.</summary>
@@ -67,11 +86,7 @@ namespace SoftWx.Match {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int SingleCharDistance(string string1, string string2, int len2, int start) {
             if (len2 <= 2) return len2;
-#if NET8_0_OR_GREATER
-            return (string2.AsSpan(start + 1, len2 - 2).IndexOf(string1[start]) >= 0) ? len2 - 1 : len2;
-#else
             return (string2.IndexOf(string1[start], start + 1, len2 - 2) >= 0) ? len2 - 1 : len2;
-#endif
         }
 
         /// <summary>Returns true if the remaining trimmed substrings represent a single adjacent transposition.</summary>
@@ -79,6 +94,7 @@ namespace SoftWx.Match {
         public static bool IsSingleTransposition(string string1, string string2, int len1, int len2, int start) {
             return len1 == 2 && len2 == 2 && string1[start] == string2[start + 1] && string1[start + 1] == string2[start];
         }
+#endif
 
         /// <summary>Calculate a similarity measure from an edit distance.</summary>
         /// <param name="length">The length of the longer of the two strings the edit distance is from.</param>
