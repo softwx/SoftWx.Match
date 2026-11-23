@@ -4,6 +4,9 @@
 
 using System;
 using System.Runtime.CompilerServices;
+#if NET8_0_OR_GREATER
+using System.Buffers;
+#endif
 
 namespace SoftWx.Match {
     /// <summary>
@@ -24,6 +27,9 @@ namespace SoftWx.Match {
     /// The methods in this class are not threadsafe. Use the static versions in the Distance
     /// and Similarity classes if that is required.</remarks>
     public class Levenshtein : IDistance, ISimilarity {
+#if NET8_0_OR_GREATER
+        private const int StackAllocThreshold = 256;
+#endif
         private int[] baseChar1Costs;
 
         /// <summary>Create a new instance of Levenshtein.</summary>
@@ -63,8 +69,12 @@ namespace SoftWx.Match {
             Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
             if (len1 == 0) return len2;
 
-            return Distance(string1, string2, len1, len2, start,
-                this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2]);
+            int[] costs = this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2];
+#if NET8_0_OR_GREATER
+            return Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2), costs);
+#else
+            return Distance(string1, string2, len1, len2, start, costs);
+#endif
         }
 
         /// <summary>Compute and return the Levenshtein edit distance between two strings.</summary>
@@ -93,12 +103,18 @@ namespace SoftWx.Match {
             Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
             if (len1 == 0) return (len2 <= iMaxDistance) ? len2 : -1;
 
+            int[] costs = this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2];
+#if NET8_0_OR_GREATER
             if (iMaxDistance < len2) {
-                return Distance(string1, string2, len1, len2, start, iMaxDistance,
-                    this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2]);
+                return Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2), iMaxDistance, costs);
             }
-            return Distance(string1, string2, len1, len2, start,
-                this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2]);
+            return Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2), costs);
+#else
+            if (iMaxDistance < len2) {
+                return Distance(string1, string2, len1, len2, start, iMaxDistance, costs);
+            }
+            return Distance(string1, string2, len1, len2, start, costs);
+#endif
         }
 
         /// <summary>Return Levenshtein similarity between two strings
@@ -119,9 +135,14 @@ namespace SoftWx.Match {
             Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
             if (len1 == 0) return (len2 == 0) ? 1.0 : len2.ToSimilarity(string2.Length);
 
-            return Distance(string1, string2, len1, len2, start,
-                    this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2])
-                    .ToSimilarity(string2.Length);
+            int[] costs = this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2];
+#if NET8_0_OR_GREATER
+            return Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2), costs)
+                .ToSimilarity(string2.Length);
+#else
+            return Distance(string1, string2, len1, len2, start, costs)
+                .ToSimilarity(string2.Length);
+#endif
         }
 
         /// <summary>Return Levenshtein similarity between two strings
@@ -151,16 +172,123 @@ namespace SoftWx.Match {
             Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
             if (len1 == 0) return (len2 == 0) ? 1.0 : len2.ToSimilarity(string2.Length);
 
+            int[] costs = this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2];
+#if NET8_0_OR_GREATER
             if (iMaxDistance < len2) {
-                return Distance(string1, string2, len1, len2, start, iMaxDistance,
-                        this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2])
-                        .ToSimilarity(string2.Length);
-            }
-            return Distance(string1, string2, len1, len2, start,
-                    this.baseChar1Costs = (len2 <= this.baseChar1Costs.Length) ? this.baseChar1Costs : new int[len2])
+                return Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2), iMaxDistance, costs)
                     .ToSimilarity(string2.Length);
+            }
+            return Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2), costs)
+                .ToSimilarity(string2.Length);
+#else
+            if (iMaxDistance < len2) {
+                return Distance(string1, string2, len1, len2, start, iMaxDistance, costs)
+                    .ToSimilarity(string2.Length);
+            }
+            return Distance(string1, string2, len1, len2, start, costs)
+                .ToSimilarity(string2.Length);
+#endif
         }
 
+#if NET8_0_OR_GREATER
+        /// <summary>Threadsafe internal entry point using stackalloc for short strings and ArrayPool for long strings.</summary>
+        internal static int Distance(ReadOnlySpan<char> s1, ReadOnlySpan<char> s2) {
+            if (s2.Length <= StackAllocThreshold) {
+                Span<int> char1Costs = stackalloc int[s2.Length];
+                return Distance(s1, s2, char1Costs);
+            }
+            int[] rented = ArrayPool<int>.Shared.Rent(s2.Length);
+            try {
+                return Distance(s1, s2, rented);
+            } finally {
+                ArrayPool<int>.Shared.Return(rented);
+            }
+        }
+
+        /// <summary>Threadsafe internal bounded entry point using stackalloc for short strings and ArrayPool for long strings.</summary>
+        internal static int Distance(ReadOnlySpan<char> s1, ReadOnlySpan<char> s2, int maxDistance) {
+            if (s2.Length <= StackAllocThreshold) {
+                Span<int> char1Costs = stackalloc int[s2.Length];
+                return Distance(s1, s2, maxDistance, char1Costs);
+            }
+            int[] rented = ArrayPool<int>.Shared.Rent(s2.Length);
+            try {
+                return Distance(s1, s2, maxDistance, rented);
+            } finally {
+                ArrayPool<int>.Shared.Return(rented);
+            }
+        }
+
+        /// <summary>Internal implementation of the core Levenshtein algorithm.</summary>
+        /// <remarks>https://github.com/softwx/SoftWx.Match</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static int Distance(ReadOnlySpan<char> s1, ReadOnlySpan<char> s2, Span<int> char1Costs) {
+            int len1 = s1.Length;
+            int len2 = s2.Length;
+            char1Costs = char1Costs.Slice(0, len2);
+
+            for (int j = 0; j < char1Costs.Length;) char1Costs[j] = ++j;
+            int currentCharCost = 0;
+            for (int i = 0; i < len1; ++i) {
+                int leftCharCost = i;
+                int aboveCharCost = i;
+                char char1 = s1[i];
+                for (int j = 0; j < s2.Length; ++j) {
+                    currentCharCost = leftCharCost; // cost on diagonal (substitution)
+                    leftCharCost = char1Costs[j];
+                    if (s2[j] != char1) {
+                        // substitution if neither of two conditions below
+                        if (aboveCharCost < currentCharCost) currentCharCost = aboveCharCost; // deletion
+                        if (leftCharCost < currentCharCost) currentCharCost = leftCharCost; // insertion
+                        ++currentCharCost;
+                    }
+                    char1Costs[j] = aboveCharCost = currentCharCost;
+                }
+            }
+            return currentCharCost;
+        }
+
+        /// <summary>Internal implementation of the core Levenshtein algorithm that accepts a maxDistance.</summary>
+        /// <remarks>https://github.com/softwx/SoftWx.Match</remarks>
+        internal static int Distance(ReadOnlySpan<char> s1, ReadOnlySpan<char> s2, int maxDistance, Span<int> char1Costs) {
+            int len1 = s1.Length;
+            int len2 = s2.Length;
+#if DEBUG
+            if (len2 < maxDistance) throw new ArgumentException("len2 must be >= maxDistance", nameof(maxDistance));
+            if (len2 - len1 > maxDistance) throw new ArgumentException("len2 - len1 must be <= maxDistance", nameof(maxDistance));
+#endif
+            char1Costs = char1Costs.Slice(0, len2);
+
+            for (int j = 0; j < maxDistance;) char1Costs[j] = ++j;
+            int lenDiff = len2 - len1;
+            int jStartOffset = maxDistance - lenDiff;
+            int jStart = 0;
+            int jEnd = maxDistance;
+            int currentCost = 0;
+            for (int i = 0; i < len1; ++i) {
+                char char1 = s1[i];
+                int prevChar1Cost = i;
+                int aboveCharCost = i;
+                // no need to look beyond window of lower right diagonal - maxDistance cells (lower right diag is i - lenDiff)
+                // and the upper left diagonal + maxDistance cells (upper left is i)
+                jStart += (i > jStartOffset) ? 1 : 0;
+                if (jEnd < len2) char1Costs[jEnd++] = maxDistance + 1;
+                for (int j = jStart; j < jEnd; ++j) {
+                    currentCost = prevChar1Cost; // cost on diagonal (substitution)
+                    prevChar1Cost = char1Costs[j];
+                    if (s2[j] != char1) {
+                        // substitution if neither of two conditions below
+                        if (aboveCharCost < currentCost) currentCost = aboveCharCost; // deletion
+                        if (prevChar1Cost < currentCost) currentCost = prevChar1Cost; // insertion
+                        ++currentCost;
+                    }
+                    char1Costs[j] = aboveCharCost = currentCost;
+                }
+                if (char1Costs[i + lenDiff] > maxDistance) return -1;
+            }
+            return (currentCost <= maxDistance) ? currentCost : -1;
+        }
+#else
         /// <summary>Internal implementation of the core Levenshtein algorithm.</summary>
         /// <remarks>https://github.com/softwx/SoftWx.Match</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -266,6 +394,7 @@ namespace SoftWx.Match {
             }
             return (currentCost <= maxDistance) ? currentCost : -1;
         }
+#endif
     }
 }
 /*

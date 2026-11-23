@@ -4,6 +4,9 @@
 
 using System;
 using System.Runtime.CompilerServices;
+#if NET8_0_OR_GREATER
+using System.Buffers;
+#endif
 
 namespace SoftWx.Match {
     /// <summary>
@@ -37,6 +40,9 @@ namespace SoftWx.Match {
     /// The methods in this class are not threadsafe. Use the static versions in the Distance
     /// and Similarity classes if that is required.</remarks>
     public class DamerauOSA : IDistance, ISimilarity {
+#if NET8_0_OR_GREATER
+        private const int StackAllocThreshold = 256;
+#endif
         private int[] baseChar1Costs;
         private int[] basePrevChar1Costs;
 
@@ -89,7 +95,11 @@ namespace SoftWx.Match {
                 this.baseChar1Costs = new int[len2];
                 this.basePrevChar1Costs = new int[len2];
             }
+#if NET8_0_OR_GREATER
+            return Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2), this.baseChar1Costs, this.basePrevChar1Costs);
+#else
             return Distance(string1, string2, len1, len2, start, this.baseChar1Costs, this.basePrevChar1Costs);
+#endif
         }
 
         /// <summary>Compute and return the Damerau-Levenshtein optimal string
@@ -123,10 +133,17 @@ namespace SoftWx.Match {
                 this.baseChar1Costs = new int[len2];
                 this.basePrevChar1Costs = new int[len2];
             }
+#if NET8_0_OR_GREATER
+            if (iMaxDistance < len2) {
+                return Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2), iMaxDistance, this.baseChar1Costs, this.basePrevChar1Costs);
+            }
+            return Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2), this.baseChar1Costs, this.basePrevChar1Costs);
+#else
             if (iMaxDistance < len2) {
                 return Distance(string1, string2, len1, len2, start, iMaxDistance, this.baseChar1Costs, this.basePrevChar1Costs);
             }
             return Distance(string1, string2, len1, len2, start, this.baseChar1Costs, this.basePrevChar1Costs);
+#endif
         }
 
         /// <summary>Return Damerau-Levenshtein optimal string alignment similarity
@@ -151,8 +168,13 @@ namespace SoftWx.Match {
                 this.baseChar1Costs = new int[len2];
                 this.basePrevChar1Costs = new int[len2];
             }
+#if NET8_0_OR_GREATER
+            return Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2), this.baseChar1Costs, this.basePrevChar1Costs)
+                .ToSimilarity(string2.Length);
+#else
             return Distance(string1, string2, len1, len2, start, this.baseChar1Costs, this.basePrevChar1Costs)
                 .ToSimilarity(string2.Length);
+#endif
         }
 
         /// <summary>Return Damerau-Levenshtein optimal string alignment similarity
@@ -186,14 +208,155 @@ namespace SoftWx.Match {
                 this.baseChar1Costs = new int[len2];
                 this.basePrevChar1Costs = new int[len2];
             }
+#if NET8_0_OR_GREATER
+            if (iMaxDistance < len2) {
+                return Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2), iMaxDistance, this.baseChar1Costs, this.basePrevChar1Costs)
+                    .ToSimilarity(string2.Length);
+            }
+            return Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2), this.baseChar1Costs, this.basePrevChar1Costs)
+                .ToSimilarity(string2.Length);
+#else
             if (iMaxDistance < len2) {
                 return Distance(string1, string2, len1, len2, start, iMaxDistance, this.baseChar1Costs, this.basePrevChar1Costs)
                     .ToSimilarity(string2.Length);
             }
             return Distance(string1, string2, len1, len2, start, this.baseChar1Costs, this.basePrevChar1Costs)
                 .ToSimilarity(string2.Length);
+#endif
         }
 
+#if NET8_0_OR_GREATER
+        /// <summary>Threadsafe internal entry point using stackalloc for short strings and ArrayPool for long strings.</summary>
+        internal static int Distance(ReadOnlySpan<char> s1, ReadOnlySpan<char> s2) {
+            if (s2.Length <= StackAllocThreshold) {
+                Span<int> char1Costs = stackalloc int[s2.Length];
+                Span<int> prevChar1Costs = stackalloc int[s2.Length];
+                return Distance(s1, s2, char1Costs, prevChar1Costs);
+            }
+            int[] rented = ArrayPool<int>.Shared.Rent(s2.Length * 2);
+            try {
+                return Distance(s1, s2, rented.AsSpan(0, s2.Length), rented.AsSpan(s2.Length, s2.Length));
+            } finally {
+                ArrayPool<int>.Shared.Return(rented);
+            }
+        }
+
+        /// <summary>Threadsafe internal bounded entry point using stackalloc for short strings and ArrayPool for long strings.</summary>
+        internal static int Distance(ReadOnlySpan<char> s1, ReadOnlySpan<char> s2, int maxDistance) {
+            if (s2.Length <= StackAllocThreshold) {
+                Span<int> char1Costs = stackalloc int[s2.Length];
+                Span<int> prevChar1Costs = stackalloc int[s2.Length];
+                return Distance(s1, s2, maxDistance, char1Costs, prevChar1Costs);
+            }
+            int[] rented = ArrayPool<int>.Shared.Rent(s2.Length * 2);
+            try {
+                return Distance(s1, s2, maxDistance, rented.AsSpan(0, s2.Length), rented.AsSpan(s2.Length, s2.Length));
+            } finally {
+                ArrayPool<int>.Shared.Return(rented);
+            }
+        }
+
+        /// <summary>Internal implementation of the core Damerau-Levenshtein, optimal string alignment algorithm.</summary>
+        /// <remarks>https://github.com/softwx/SoftWx.Match</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static int Distance(ReadOnlySpan<char> s1, ReadOnlySpan<char> s2, Span<int> char1Costs, Span<int> prevChar1Costs) {
+            int len1 = s1.Length;
+            int len2 = s2.Length;
+            char1Costs = char1Costs.Slice(0, len2);
+            prevChar1Costs = prevChar1Costs.Slice(0, len2);
+
+            for (int j = 0; j < char1Costs.Length;) char1Costs[j] = ++j;
+            char char1 = ' ';
+            int currentCost = 0;
+            for (int i = 0; i < len1; ++i) {
+                char prevChar1 = char1;
+                char1 = s1[i];
+                char char2 = ' ';
+                int leftCharCost = i;
+                int aboveCharCost = i;
+                int nextTransCost = 0;
+                for (int j = 0; j < s2.Length; ++j) {
+                    int thisTransCost = nextTransCost;
+                    nextTransCost = prevChar1Costs[j];
+                    prevChar1Costs[j] = currentCost = leftCharCost; // cost of diagonal (substitution)
+                    leftCharCost = char1Costs[j]; // left now equals current cost (which will be diagonal at next iteration)
+                    char prevChar2 = char2;
+                    char2 = s2[j];
+                    if (char1 != char2) {
+                        // substitution if neither of two conditions below
+                        if (aboveCharCost < currentCost) currentCost = aboveCharCost; // deletion
+                        if (leftCharCost < currentCost) currentCost = leftCharCost;   // insertion
+                        ++currentCost;
+                        if ((i != 0) && (j != 0)
+                            && (char1 == prevChar2)
+                            && (prevChar1 == char2)
+                            && (thisTransCost + 1 < currentCost)) {
+                            currentCost = thisTransCost + 1; // transposition
+                        }
+                    }
+                    char1Costs[j] = aboveCharCost = currentCost;
+                }
+            }
+            return currentCost;
+        }
+
+        /// <summary>Internal implementation of the core Damerau-Levenshtein, optimal string alignment algorithm
+        /// that accepts a maxDistance.</summary>
+        /// <remarks>https://github.com/softwx/SoftWx.Match</remarks>
+        internal static int Distance(ReadOnlySpan<char> s1, ReadOnlySpan<char> s2, int maxDistance, Span<int> char1Costs, Span<int> prevChar1Costs) {
+            int len1 = s1.Length;
+            int len2 = s2.Length;
+#if DEBUG
+            if (len2 < maxDistance) throw new ArgumentException("len2 must be >= maxDistance", nameof(maxDistance));
+            if (len2 - len1 > maxDistance) throw new ArgumentException("len2 - len1 must be <= maxDistance", nameof(maxDistance));
+#endif
+            char1Costs = char1Costs.Slice(0, len2);
+            prevChar1Costs = prevChar1Costs.Slice(0, len2);
+
+            for (int j = 0; j < maxDistance;) char1Costs[j] = ++j;
+            int lenDiff = len2 - len1;
+            int jStartOffset = maxDistance - lenDiff;
+            int jStart = 0;
+            int jEnd = maxDistance;
+            char char1 = ' ';
+            int currentCost = 0;
+            for (int i = 0; i < len1; ++i) {
+                char prevChar1 = char1;
+                char1 = s1[i];
+                char char2 = ' ';
+                int leftCharCost = i;
+                int aboveCharCost = i;
+                int nextTransCost = 0;
+                // no need to look beyond window of lower right diagonal - maxDistance cells (lower right diag is i - lenDiff)
+                // and the upper left diagonal + maxDistance cells (upper left is i)
+                jStart += (i > jStartOffset) ? 1 : 0;
+                if (jEnd < len2) char1Costs[jEnd++] = maxDistance + 1;
+                for (int j = jStart; j < jEnd; ++j) {
+                    int thisTransCost = nextTransCost;
+                    nextTransCost = prevChar1Costs[j];
+                    prevChar1Costs[j] = currentCost = leftCharCost; // cost on diagonal (substitution)
+                    leftCharCost = char1Costs[j]; // left now equals current cost (which will be diagonal at next iteration)
+                    char prevChar2 = char2;
+                    char2 = s2[j];
+                    if (char1 != char2) {
+                        // substitution if neither of two conditions below
+                        if (aboveCharCost < currentCost) currentCost = aboveCharCost; // deletion
+                        if (leftCharCost < currentCost) currentCost = leftCharCost;   // insertion
+                        ++currentCost;
+                        if ((i != 0) && (j != 0)
+                            && (char1 == prevChar2)
+                            && (prevChar1 == char2)
+                            && (thisTransCost + 1 < currentCost)) {
+                            currentCost = thisTransCost + 1; // transposition
+                        }
+                    }
+                    char1Costs[j] = aboveCharCost = currentCost;
+                }
+                if (char1Costs[i + lenDiff] > maxDistance) return -1;
+            }
+            return (currentCost <= maxDistance) ? currentCost : -1;
+        }
+#else
         /// <summary>Internal implementation of the core Damerau-Levenshtein, optimal string alignment algorithm.</summary>
         /// <remarks>https://github.com/softwx/SoftWx.Match</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -286,6 +449,7 @@ namespace SoftWx.Match {
             }
             return (currentCost <= maxDistance) ? currentCost : -1;
         }
+#endif
     }
 }
 /*

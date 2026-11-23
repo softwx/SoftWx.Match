@@ -2,6 +2,10 @@
 // Released under the MIT License the text of which appears at the end of this file.
 // <authors> Steve Hatchett
 
+#if NET8_0_OR_GREATER
+using System;
+#endif
+
 namespace SoftWx.Match {
     /// <summary>The Distance class provides threadsafe static methods that compute the
     /// distance between two strings.</summary>
@@ -38,7 +42,11 @@ namespace SoftWx.Match {
             Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
             if (len1 == 0) return len2;
 
+#if NET8_0_OR_GREATER
+            return Match.Levenshtein.Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2));
+#else
             return Match.Levenshtein.Distance(string1, string2, len1, len2, start, new int[len2]);
+#endif
         }
 
         /// <summary>Compute and return the Levenshtein edit distance between two strings.</summary>
@@ -63,10 +71,17 @@ namespace SoftWx.Match {
             Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
             if (len1 == 0) return (len2 <= maxDistance) ? len2 : -1;
 
+#if NET8_0_OR_GREATER
+            if (maxDistance < len2) {
+                return Match.Levenshtein.Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2), maxDistance);
+            }
+            return Match.Levenshtein.Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2));
+#else
             if (maxDistance < len2) {
                 return Match.Levenshtein.Distance(string1, string2, len1, len2, start, maxDistance, new int[len2]);
             }
             return Match.Levenshtein.Distance(string1, string2, len1, len2, start, new int[len2]);
+#endif
         }
 
         /// <summary>Compute and return the Damerau-Levenshtein optimal string
@@ -89,7 +104,11 @@ namespace SoftWx.Match {
             Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
             if (len1 == 0) return len2;
 
+#if NET8_0_OR_GREATER
+            return Match.DamerauOSA.Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2));
+#else
             return Match.DamerauOSA.Distance(string1, string2, len1, len2, start, new int[len2], new int[len2]);
+#endif
         }
 
         /// <summary>Compute and return the Damerau-Levenshtein optimal string
@@ -115,10 +134,17 @@ namespace SoftWx.Match {
             Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
             if (len1 == 0) return (len2 <= maxDistance) ? len2 : -1;
 
+#if NET8_0_OR_GREATER
+            if (maxDistance < len2) {
+                return Match.DamerauOSA.Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2), maxDistance);
+            }
+            return Match.DamerauOSA.Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2));
+#else
             if (maxDistance < len2) {
                 return Match.DamerauOSA.Distance(string1, string2, len1, len2, start, maxDistance, new int[len2], new int[len2]);
             }
             return Match.DamerauOSA.Distance(string1, string2, len1, len2, start, new int[len2], new int[len2]);
+#endif
         }
     }
 }

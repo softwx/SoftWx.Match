@@ -30,8 +30,13 @@ namespace SoftWx.Match {
             Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
             if (len1 == 0) return (len2 == 0) ? 1.0 : len2.ToSimilarity(string2.Length);
 
+#if NET8_0_OR_GREATER
+            return Match.Levenshtein.Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2))
+                .ToSimilarity(string2.Length);
+#else
             return Match.Levenshtein.Distance(string1, string2, len1, len2, start, new int[len2])
                 .ToSimilarity(string2.Length);
+#endif
         }
 
         /// <summary>Return a measure of the similarity between two strings.</summary>
@@ -60,12 +65,21 @@ namespace SoftWx.Match {
             Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
             if (len1 == 0) return (len2 == 0) ? 1.0 : len2.ToSimilarity(string2.Length);
 
+#if NET8_0_OR_GREATER
+            if (iMaxDistance < len2) {
+                return Match.Levenshtein.Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2), iMaxDistance)
+                    .ToSimilarity(string2.Length);
+            }
+            return Match.Levenshtein.Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2))
+                .ToSimilarity(string2.Length);
+#else
             if (iMaxDistance < len2) {
                 return Match.Levenshtein.Distance(string1, string2, len1, len2, start, iMaxDistance, new int[len2])
                     .ToSimilarity(string2.Length);
             }
             return Match.Levenshtein.Distance(string1, string2, len1, len2, start, new int[len2])
                 .ToSimilarity(string2.Length);
+#endif
         }
 
         /// <summary>Return Damerau-Levenshtein optimal string alignment similarity
@@ -86,8 +100,13 @@ namespace SoftWx.Match {
             Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
             if (len1 == 0) return (len2 == 0) ? 1.0 : len2.ToSimilarity(string2.Length);
 
+#if NET8_0_OR_GREATER
+            return Match.DamerauOSA.Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2))
+                .ToSimilarity(string2.Length);
+#else
             return Match.DamerauOSA.Distance(string1, string2, len1, len2, start, new int[len2], new int[len2])
                 .ToSimilarity(string2.Length);
+#endif
         }
 
         /// <summary>Return Damerau-Levenshtein optimal string alignment similarity
@@ -117,12 +136,21 @@ namespace SoftWx.Match {
             Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
             if (len1 == 0) return (len2 == 0) ? 1.0 : len2.ToSimilarity(string2.Length);
 
+#if NET8_0_OR_GREATER
+            if (iMaxDistance < len2) {
+                return Match.DamerauOSA.Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2), iMaxDistance)
+                    .ToSimilarity(string2.Length);
+            }
+            return Match.DamerauOSA.Distance(string1.AsSpan(start, len1), string2.AsSpan(start, len2))
+                .ToSimilarity(string2.Length);
+#else
             if (iMaxDistance < len2) {
                 return Match.DamerauOSA.Distance(string1, string2, len1, len2, start, iMaxDistance, new int[len2], new int[len2])
                     .ToSimilarity(string2.Length);
             }
             return Match.DamerauOSA.Distance(string1, string2, len1, len2, start, new int[len2], new int[len2])
                 .ToSimilarity(string2.Length);
+#endif
         }
     }
 }
