@@ -1,4 +1,5 @@
-﻿// Copyright ©2015-2026 SoftWx, Inc.
+﻿// Copyright © 2015-2026 Steve Hatchett
+// SPDX-License-Identifier: MIT
 // Released under the MIT License the text of which appears at the end of this file.
 // <authors> Steve Hatchett
 
@@ -14,14 +15,14 @@ namespace SoftWx.Match {
     /// Alignment (OSA) comparisons between two strings.
     /// </summary>
     /// <remarks>
-    /// Copyright ©2015-2026 SoftWx, Inc.
+    /// Copyright © 2015-2026 Steve Hatchett
     /// The inspiration for creating highly optimized edit distance functions was
     /// from Sten Hjelmqvist's "Fast, memory efficient" algorithm, described at
     /// https://www.codeproject.com/Articles/13525/Fast-memory-efficient-Levenshtein-algorithm
     /// The Damerau-Levenshtein algorithm is basically the Levenshtein algorithm with a
     /// modification that considers transposition of two adjacent characters as a single edit.
     /// The optimized algorithm was described in detail in my post at
-    /// http://blog.softwx.net/2015/01/optimizing-damerau-levenshtein_15.html
+    /// https://blog.softwx.net/2015/01/optimizing-damerau-levenshtein_15.html
     /// Also see https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance
     /// Note that this implementation of Damerau-Levenshtein is the simpler and faster optimal
     /// string alignment (aka restricted edit) distance that differs slightly from the classic

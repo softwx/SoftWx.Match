@@ -9,6 +9,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SoftWx.Match.Test", "SoftWx
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SoftWx.Match.Benchmark", "SoftWx.Match.Benchmark\SoftWx.Match.Benchmark.csproj", "{9B485F58-2792-481C-9E68-1DCA9C0B0F8C}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SoftWx.Match.AotTest", "SoftWx.Match.AotTest\SoftWx.Match.AotTest.csproj", "{7F2E3D4C-8B1A-4E6F-9C2D-5A1B7E8F3C90}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{9B485F58-2792-481C-9E68-1DCA9C0B0F8C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9B485F58-2792-481C-9E68-1DCA9C0B0F8C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9B485F58-2792-481C-9E68-1DCA9C0B0F8C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7F2E3D4C-8B1A-4E6F-9C2D-5A1B7E8F3C90}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7F2E3D4C-8B1A-4E6F-9C2D-5A1B7E8F3C90}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7F2E3D4C-8B1A-4E6F-9C2D-5A1B7E8F3C90}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7F2E3D4C-8B1A-4E6F-9C2D-5A1B7E8F3C90}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

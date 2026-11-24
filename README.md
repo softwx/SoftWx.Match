@@ -16,8 +16,8 @@ dotnet add package SoftWx.Match
 
 This project started as a place to publish code from a series of blog posts on optimizing the Levenshtein and Damerau-Levenshtein algorithms:
 
-- [Optimizing Levenshtein Algorithm in C#](http://blog.softwx.net/2014/12/optimizing-levenshtein-algorithm-in-c.html)
-- [Optimizing Damerau-Levenshtein in C#](http://blog.softwx.net/2015/01/optimizing-damerau-levenshtein_15.html)
+- [Optimizing Levenshtein Algorithm in C#](https://blog.softwx.net/2014/12/optimizing-levenshtein-algorithm-in-c.html)
+- [Optimizing Damerau-Levenshtein in C#](https://blog.softwx.net/2015/01/optimizing-damerau-levenshtein_15.html)
 
 A primary goal of the library is to provide string distance and similarity methods optimized for speed and memory efficiency. Functionality is exposed both as instantiable classes (reusing internal buffers up to 512 chars by default, or a caller-specified `expectedMaxStringLength`; not thread-safe) and as thread-safe static methods.
 
@@ -122,6 +122,11 @@ dotnet run --project SoftWx.Match.Benchmark -c Release
 ```
 
 ## Release Notes
+
+**v3.0.1**
+- Updated copyright attribution to Steve Hatchett, removed inactive company metadata, and added `SPDX-License-Identifier: MIT` headers
+- Updated blog links to HTTPS
+- Added consumer-level NativeAOT publish and execution smoke test in CI/Release
 
 **v3.0.0**
 - Multi-targeted `netstandard2.0`, `net8.0`, and `net10.0` (dropped obsolete `netstandard1.0`)

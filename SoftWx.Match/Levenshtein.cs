@@ -1,4 +1,5 @@
-﻿// Copyright ©2015-2026 SoftWx, Inc.
+﻿// Copyright © 2015-2026 Steve Hatchett
+// SPDX-License-Identifier: MIT
 // Released under the MIT License the text of which appears at the end of this file.
 // <authors> Steve Hatchett
 
@@ -13,7 +14,7 @@ namespace SoftWx.Match {
     /// Class providing optimized methods for computing Levenshtein comparisons between two strings.
     /// </summary>
     /// <remarks>
-    /// Copyright ©2015-2026 SoftWx, Inc.
+    /// Copyright © 2015-2026 Steve Hatchett
     /// The inspiration for creating highly optimized edit distance functions was
     /// from Sten Hjelmqvist's "Fast, memory efficient" algorithm, described at
     /// https://www.codeproject.com/Articles/13525/Fast-memory-efficient-Levenshtein-algorithm
@@ -22,7 +23,7 @@ namespace SoftWx.Match {
     /// string to the other. This value will be >= 0, where 0 indicates identical strings.
     /// Comparisons are case sensitive, so for example, "Fred" and "fred" will have a
     /// distance of 1. The optimized algorithm was described in detail in my post at
-    /// http://blog.softwx.net/2014/12/optimizing-levenshtein-algorithm-in-c.html
+    /// https://blog.softwx.net/2014/12/optimizing-levenshtein-algorithm-in-c.html
     /// Also see https://en.wikipedia.org/wiki/Levenshtein_distance for general information.
     /// The methods in this class are not threadsafe. Use the static versions in the Distance
     /// and Similarity classes if that is required.</remarks>

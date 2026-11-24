@@ -42,6 +42,14 @@ jobs:
       - name: Test (netstandard2.0 target)
         run: dotnet test SoftWx.Match.Test/SoftWx.Match.Test.csproj --configuration Release -f net8.0 -p:TestNetStandard=true --verbosity normal
 
+      - name: Install NativeAOT prerequisites
+        run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev
+
+      - name: Publish & run NativeAOT smoke test
+        run: |
+          dotnet publish SoftWx.Match.AotTest/SoftWx.Match.AotTest.csproj --configuration Release --output ./SoftWx.Match.AotTest/bin/aot-publish
+          ./SoftWx.Match.AotTest/bin/aot-publish/SoftWx.Match.AotTest
+
       - name: Pack
         run: dotnet pack SoftWx.Match/SoftWx.Match.csproj --configuration Release --no-build --output ./artifacts
 

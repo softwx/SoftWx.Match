@@ -1,4 +1,5 @@
-﻿// Copyright ©2015-2026 SoftWx, Inc.
+﻿// Copyright © 2015-2026 Steve Hatchett
+// SPDX-License-Identifier: MIT
 // Released under the MIT License the text of which appears at the end of this file.
 // <authors> Steve Hatchett
 

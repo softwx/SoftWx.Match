@@ -2,17 +2,21 @@
 
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net8.0;net10.0</TargetFrameworks>
-    <Version>3.0.0</Version>
+    <Version>3.0.1</Version>
     <Authors>Steve Hatchett</Authors>
-    <Company>SoftWx, Inc.</Company>
     <Description>C# library to support text and person name fuzzy matching. Contains Levenshtein and Damerau-Levenshtein (optimal string alignment) edit distance and normalized similarity functions optimized for speed and reduced memory consumption, including bounded max-distance and min-similarity variants.</Description>
-    <Copyright>Copyright © 2015-2026 SoftWx, Inc.</Copyright>
+    <Copyright>Copyright © 2015-2026 Steve Hatchett</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/softwx/SoftWx.Match</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/softwx/SoftWx.Match</RepositoryUrl>
-    <PackageReleaseNotes>v3.0.0
+    <PackageReleaseNotes>v3.0.1
+- Updated copyright attribution, and added SPDX-License-Identifier headers
+- Updated blog links to HTTPS
+- Added consumer-level NativeAOT publish and execution smoke test in CI/Release
+
+v3.0.0
 - Multi-targeted for netstandard2.0, net8.0, and net10.0 (dropped netstandard1.0)
 - Enabled nullable reference types, trimming/NativeAOT compatibility, and built-in Source Link
 - Added ReadOnlySpan&lt;char&gt; overloads (net8.0+), zero-allocation static methods (stackalloc/ArrayPool on net8.0+, capped thread-local cache on netstandard2.0), capped instance buffer retention, lazy maxDistance initialization, SIMD CommonPrefixLength, and O(1) fast paths
