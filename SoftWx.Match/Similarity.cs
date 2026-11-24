@@ -1,4 +1,4 @@
-﻿// Copyright © 2015-2026 Steve Hatchett
+// Copyright © 2015-2026 Steve Hatchett
 // SPDX-License-Identifier: MIT
 // Released under the MIT License the text of which appears at the end of this file.
 // <authors> Steve Hatchett
@@ -22,21 +22,8 @@ namespace SoftWx.Match {
         public static double Levenshtein(string? string1, string? string2) {
             if (string1 == null) return (string2 == null) ? 1 : 0;
             if (string2 == null) return 0;
-#if NET8_0_OR_GREATER
-            return Levenshtein(string1.AsSpan(), string2.AsSpan());
-#else
-            // if strings of different lengths, ensure shorter string is in string1. This can result in a little
-            // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) (string1, string2) = (string2, string1);
-
-            // identify common suffix and/or prefix that can be ignored
-            Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
-            if (len1 == 0) return (len2 == 0) ? 1.0 : len2.ToSimilarity(string2.Length);
-            if (len1 == 1) return Helpers.SingleCharDistance(string1, string2, len2, start).ToSimilarity(string2.Length);
-
-            return Match.Levenshtein.DistanceCore(string1, string2, len1, len2, start)
-                .ToSimilarity(string2.Length);
-#endif
+            return Match.Levenshtein.DistanceStatic(string1.AsSpan(), string2.AsSpan())
+                .ToSimilarity(Math.Max(string1.Length, string2.Length));
         }
 
         /// <summary>Return Levenshtein similarity between two strings (1 - (levenshtein distance / len of longer string)).</summary>
@@ -51,37 +38,11 @@ namespace SoftWx.Match {
         /// strings.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when minSimilarity is NaN or outside the range 0 to 1.0.</exception>
         public static double Levenshtein(string? string1, string? string2, double minSimilarity) {
-            if (double.IsNaN(minSimilarity) || minSimilarity < 0 || minSimilarity > 1) {
-                throw new ArgumentOutOfRangeException(nameof(minSimilarity), minSimilarity, "minSimilarity must be in range 0 to 1.0");
-            }
+            Helpers.ValidateMinSimilarity(minSimilarity);
             if (string1 == null || string2 == null) return Helpers.NullSimilarityResults(string1, string2, minSimilarity);
-#if NET8_0_OR_GREATER
-            return Levenshtein(string1.AsSpan(), string2.AsSpan(), minSimilarity);
-#else
-            // if strings of different lengths, ensure shorter string is in string1. This can result in a little
-            // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) (string1, string2) = (string2, string1);
-
-            int iMaxDistance = minSimilarity.ToDistance(string2.Length);
-            if (string2.Length - string1.Length > iMaxDistance) return -1;
-            if (iMaxDistance == 0) return (string1 == string2) ? 1 : -1;
-
-            // identify common suffix and/or prefix that can be ignored
-            Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
-            if (len1 == 0) return (len2 == 0) ? 1.0 : len2.ToSimilarity(string2.Length);
-            if (iMaxDistance == 1) return (len2 == 1) ? 1.ToSimilarity(string2.Length) : -1;
-            if (len1 == 1) {
-                int dist = Helpers.SingleCharDistance(string1, string2, len2, start);
-                return (dist <= iMaxDistance) ? dist.ToSimilarity(string2.Length) : -1;
-            }
-
-            if (iMaxDistance < len2) {
-                return Match.Levenshtein.DistanceCore(string1, string2, len1, len2, start, iMaxDistance)
-                    .ToSimilarity(string2.Length);
-            }
-            return Match.Levenshtein.DistanceCore(string1, string2, len1, len2, start)
-                .ToSimilarity(string2.Length);
-#endif
+            int maxLen = Math.Max(string1.Length, string2.Length);
+            return Match.Levenshtein.DistanceStatic(string1.AsSpan(), string2.AsSpan(), minSimilarity.ToDistance(maxLen))
+                .ToSimilarity(maxLen);
         }
 
         /// <summary>Return Damerau-Levenshtein optimal string alignment similarity
@@ -95,21 +56,8 @@ namespace SoftWx.Match {
         public static double DamerauOSA(string? string1, string? string2) {
             if (string1 == null) return (string2 == null) ? 1 : 0;
             if (string2 == null) return 0;
-#if NET8_0_OR_GREATER
-            return DamerauOSA(string1.AsSpan(), string2.AsSpan());
-#else
-            // if strings of different lengths, ensure shorter string is in string1. This can result in a little
-            // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) (string1, string2) = (string2, string1);
-
-            // identify common suffix and/or prefix that can be ignored
-            Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
-            if (len1 == 0) return (len2 == 0) ? 1.0 : len2.ToSimilarity(string2.Length);
-            if (len1 == 1) return Helpers.SingleCharDistance(string1, string2, len2, start).ToSimilarity(string2.Length);
-
-            return Match.DamerauOSA.DistanceCore(string1, string2, len1, len2, start)
-                .ToSimilarity(string2.Length);
-#endif
+            return Match.DamerauOSA.DistanceStatic(string1.AsSpan(), string2.AsSpan())
+                .ToSimilarity(Math.Max(string1.Length, string2.Length));
         }
 
         /// <summary>Return Damerau-Levenshtein optimal string alignment similarity
@@ -125,41 +73,11 @@ namespace SoftWx.Match {
         /// strings.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when minSimilarity is NaN or outside the range 0 to 1.0.</exception>
         public static double DamerauOSA(string? string1, string? string2, double minSimilarity) {
-            if (double.IsNaN(minSimilarity) || minSimilarity < 0 || minSimilarity > 1) {
-                throw new ArgumentOutOfRangeException(nameof(minSimilarity), minSimilarity, "minSimilarity must be in range 0 to 1.0");
-            }
+            Helpers.ValidateMinSimilarity(minSimilarity);
             if (string1 == null || string2 == null) return Helpers.NullSimilarityResults(string1, string2, minSimilarity);
-#if NET8_0_OR_GREATER
-            return DamerauOSA(string1.AsSpan(), string2.AsSpan(), minSimilarity);
-#else
-            // if strings of different lengths, ensure shorter string is in string1. This can result in a little
-            // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) (string1, string2) = (string2, string1);
-
-            int iMaxDistance = minSimilarity.ToDistance(string2.Length);
-            if (string2.Length - string1.Length > iMaxDistance) return -1;
-            if (iMaxDistance == 0) return (string1 == string2) ? 1 : -1;
-
-            // identify common suffix and/or prefix that can be ignored
-            Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
-            if (len1 == 0) return (len2 == 0) ? 1.0 : len2.ToSimilarity(string2.Length);
-            if (iMaxDistance == 1) {
-                return (len2 == 1 || Helpers.IsSingleTransposition(string1, string2, len1, len2, start))
-                    ? 1.ToSimilarity(string2.Length)
-                    : -1;
-            }
-            if (len1 == 1) {
-                int dist = Helpers.SingleCharDistance(string1, string2, len2, start);
-                return (dist <= iMaxDistance) ? dist.ToSimilarity(string2.Length) : -1;
-            }
-
-            if (iMaxDistance < len2) {
-                return Match.DamerauOSA.DistanceCore(string1, string2, len1, len2, start, iMaxDistance)
-                    .ToSimilarity(string2.Length);
-            }
-            return Match.DamerauOSA.DistanceCore(string1, string2, len1, len2, start)
-                .ToSimilarity(string2.Length);
-#endif
+            int maxLen = Math.Max(string1.Length, string2.Length);
+            return Match.DamerauOSA.DistanceStatic(string1.AsSpan(), string2.AsSpan(), minSimilarity.ToDistance(maxLen))
+                .ToSimilarity(maxLen);
         }
 
 #if NET8_0_OR_GREATER
@@ -170,20 +88,9 @@ namespace SoftWx.Match {
         /// <param name="string2">The other character span to compare.</param>
         /// <returns>The degree of similarity 0 to 1.0, where 0 represents a lack of any
         /// notable similarity, and 1 represents equivalent spans.</returns>
-        public static double Levenshtein(ReadOnlySpan<char> string1, ReadOnlySpan<char> string2) {
-            if (string1.Length > string2.Length) {
-                ReadOnlySpan<char> t = string1;
-                string1 = string2;
-                string2 = t;
-            }
-            int maxLen = string2.Length;
-
-            Helpers.PrefixSuffixPrep(ref string1, ref string2);
-            if (string1.Length == 0) return (string2.Length == 0) ? 1.0 : string2.Length.ToSimilarity(maxLen);
-            if (string1.Length == 1) return Helpers.SingleCharDistance(string1, string2).ToSimilarity(maxLen);
-
-            return Match.Levenshtein.DistanceCore(string1, string2).ToSimilarity(maxLen);
-        }
+        public static double Levenshtein(ReadOnlySpan<char> string1, ReadOnlySpan<char> string2) =>
+            Match.Levenshtein.DistanceStatic(string1, string2)
+                .ToSimilarity(Math.Max(string1.Length, string2.Length));
 
         /// <summary>Return Levenshtein similarity between two character spans (1 - (levenshtein distance / len of longer span)).</summary>
         /// <remarks>https://github.com/softwx/SoftWx.Match
@@ -197,34 +104,10 @@ namespace SoftWx.Match {
         /// spans.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when minSimilarity is NaN or outside the range 0 to 1.0.</exception>
         public static double Levenshtein(ReadOnlySpan<char> string1, ReadOnlySpan<char> string2, double minSimilarity) {
-            if (double.IsNaN(minSimilarity) || minSimilarity < 0 || minSimilarity > 1) {
-                throw new ArgumentOutOfRangeException(nameof(minSimilarity), minSimilarity, "minSimilarity must be in range 0 to 1.0");
-            }
-
-            if (string1.Length > string2.Length) {
-                ReadOnlySpan<char> t = string1;
-                string1 = string2;
-                string2 = t;
-            }
-            int maxLen = string2.Length;
-
-            int iMaxDistance = minSimilarity.ToDistance(maxLen);
-            if (maxLen - string1.Length > iMaxDistance) return -1;
-            if (iMaxDistance == 0) return string1.SequenceEqual(string2) ? 1 : -1;
-
-            Helpers.PrefixSuffixPrep(ref string1, ref string2);
-            if (string1.Length == 0) return (string2.Length == 0) ? 1.0 : string2.Length.ToSimilarity(maxLen);
-            // After PrefixSuffixPrep both ends differ, so distance == 1 iff both trimmed spans have length 1.
-            if (iMaxDistance == 1) return (string2.Length == 1) ? 1.ToSimilarity(maxLen) : -1;
-            if (string1.Length == 1) {
-                int dist = Helpers.SingleCharDistance(string1, string2);
-                return (dist <= iMaxDistance) ? dist.ToSimilarity(maxLen) : -1;
-            }
-
-            if (iMaxDistance < string2.Length) {
-                return Match.Levenshtein.DistanceCore(string1, string2, iMaxDistance).ToSimilarity(maxLen);
-            }
-            return Match.Levenshtein.DistanceCore(string1, string2).ToSimilarity(maxLen);
+            Helpers.ValidateMinSimilarity(minSimilarity);
+            int maxLen = Math.Max(string1.Length, string2.Length);
+            return Match.Levenshtein.DistanceStatic(string1, string2, minSimilarity.ToDistance(maxLen))
+                .ToSimilarity(maxLen);
         }
 
         /// <summary>Return Damerau-Levenshtein optimal string alignment similarity
@@ -235,20 +118,9 @@ namespace SoftWx.Match {
         /// <param name="string2">The other character span to compare.</param>
         /// <returns>The degree of similarity 0 to 1.0, where 0 represents a lack of any
         /// notable similarity, and 1 represents equivalent spans.</returns>
-        public static double DamerauOSA(ReadOnlySpan<char> string1, ReadOnlySpan<char> string2) {
-            if (string1.Length > string2.Length) {
-                ReadOnlySpan<char> t = string1;
-                string1 = string2;
-                string2 = t;
-            }
-            int maxLen = string2.Length;
-
-            Helpers.PrefixSuffixPrep(ref string1, ref string2);
-            if (string1.Length == 0) return (string2.Length == 0) ? 1.0 : string2.Length.ToSimilarity(maxLen);
-            if (string1.Length == 1) return Helpers.SingleCharDistance(string1, string2).ToSimilarity(maxLen);
-
-            return Match.DamerauOSA.DistanceCore(string1, string2).ToSimilarity(maxLen);
-        }
+        public static double DamerauOSA(ReadOnlySpan<char> string1, ReadOnlySpan<char> string2) =>
+            Match.DamerauOSA.DistanceStatic(string1, string2)
+                .ToSimilarity(Math.Max(string1.Length, string2.Length));
 
         /// <summary>Return Damerau-Levenshtein optimal string alignment similarity
         /// between two character spans (1 - (damerau distance / len of longer span)).</summary>
@@ -263,38 +135,10 @@ namespace SoftWx.Match {
         /// spans.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when minSimilarity is NaN or outside the range 0 to 1.0.</exception>
         public static double DamerauOSA(ReadOnlySpan<char> string1, ReadOnlySpan<char> string2, double minSimilarity) {
-            if (double.IsNaN(minSimilarity) || minSimilarity < 0 || minSimilarity > 1) {
-                throw new ArgumentOutOfRangeException(nameof(minSimilarity), minSimilarity, "minSimilarity must be in range 0 to 1.0");
-            }
-
-            if (string1.Length > string2.Length) {
-                ReadOnlySpan<char> t = string1;
-                string1 = string2;
-                string2 = t;
-            }
-            int maxLen = string2.Length;
-
-            int iMaxDistance = minSimilarity.ToDistance(maxLen);
-            if (maxLen - string1.Length > iMaxDistance) return -1;
-            if (iMaxDistance == 0) return string1.SequenceEqual(string2) ? 1 : -1;
-
-            Helpers.PrefixSuffixPrep(ref string1, ref string2);
-            if (string1.Length == 0) return (string2.Length == 0) ? 1.0 : string2.Length.ToSimilarity(maxLen);
-            // After PrefixSuffixPrep both ends differ, so distance == 1 iff len2 == 1 or a 2-char transposition.
-            if (iMaxDistance == 1) {
-                return (string2.Length == 1 || Helpers.IsSingleTransposition(string1, string2))
-                    ? 1.ToSimilarity(maxLen)
-                    : -1;
-            }
-            if (string1.Length == 1) {
-                int dist = Helpers.SingleCharDistance(string1, string2);
-                return (dist <= iMaxDistance) ? dist.ToSimilarity(maxLen) : -1;
-            }
-
-            if (iMaxDistance < string2.Length) {
-                return Match.DamerauOSA.DistanceCore(string1, string2, iMaxDistance).ToSimilarity(maxLen);
-            }
-            return Match.DamerauOSA.DistanceCore(string1, string2).ToSimilarity(maxLen);
+            Helpers.ValidateMinSimilarity(minSimilarity);
+            int maxLen = Math.Max(string1.Length, string2.Length);
+            return Match.DamerauOSA.DistanceStatic(string1, string2, minSimilarity.ToDistance(maxLen))
+                .ToSimilarity(maxLen);
         }
 #endif
     }

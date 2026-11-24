@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net8.0;net10.0</TargetFrameworks>
-    <Version>3.0.1</Version>
+    <Version>3.0.2</Version>
     <Authors>Steve Hatchett</Authors>
     <Description>C# library to support text and person name fuzzy matching. Contains Levenshtein and Damerau-Levenshtein (optimal string alignment) edit distance and normalized similarity functions optimized for speed and reduced memory consumption, including bounded max-distance and min-similarity variants.</Description>
     <Copyright>Copyright © 2015-2026 Steve Hatchett</Copyright>
@@ -11,7 +11,12 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/softwx/SoftWx.Match</RepositoryUrl>
-    <PackageReleaseNotes>v3.0.1
+    <PackageReleaseNotes>v3.0.2
+- Added internal netstandard2.0 span shim (zero-overhead ReadOnlySpan&lt;char&gt;/Span&lt;int&gt; aliases on net8.0+) to unify DP algorithms and helper paths across target frameworks
+- Consolidated duplicated fast-path, Similarity, and static facade logic, cutting library code size by ~28% and eliminating mid-method #if directives while preserving net8.0+ performance
+- Minor internal code cleanup and benchmark setup deduplication
+
+v3.0.1
 - Updated copyright attribution, and added SPDX-License-Identifier headers
 - Updated blog links to HTTPS
 - Added consumer-level NativeAOT publish and execution smoke test in CI/Release

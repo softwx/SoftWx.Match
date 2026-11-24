@@ -61,11 +61,10 @@ namespace SoftWx.Match.Benchmark {
     }
 
     [MemoryDiagnoser]
-    public class LevenshteinDistanceBenchmarks {
-        private const int PairCount = 16;
-        private string[] left = null!;
-        private string[] right = null!;
-        private Levenshtein levenshtein = null!;
+    public abstract class DistanceBenchmarksBase {
+        protected const int PairCount = 16;
+        private protected string[] left = null!;
+        private protected string[] right = null!;
 
         [Params(6, 25, 1024)]
         public int StringLength { get; set; }
@@ -74,7 +73,7 @@ namespace SoftWx.Match.Benchmark {
         public PairKind Kind { get; set; }
 
         [GlobalSetup]
-        public void Setup() {
+        public virtual void Setup() {
             var baseStrings = Program.RandomStrings(this.StringLength, this.StringLength, PairCount * 2, 24, seed: 1);
             this.left = new string[PairCount];
             this.right = new string[PairCount];
@@ -84,6 +83,14 @@ namespace SoftWx.Match.Benchmark {
                     ? Program.MutateWithTwoEdits(baseStrings[i], i)
                     : baseStrings[PairCount + i];
             }
+        }
+    }
+
+    public class LevenshteinDistanceBenchmarks : DistanceBenchmarksBase {
+        private Levenshtein levenshtein = null!;
+
+        public override void Setup() {
+            base.Setup();
             this.levenshtein = new Levenshtein(this.StringLength);
         }
 
@@ -124,30 +131,11 @@ namespace SoftWx.Match.Benchmark {
         }
     }
 
-    [MemoryDiagnoser]
-    public class DamerauOSADistanceBenchmarks {
-        private const int PairCount = 16;
-        private string[] left = null!;
-        private string[] right = null!;
+    public class DamerauOSADistanceBenchmarks : DistanceBenchmarksBase {
         private DamerauOSA damerau = null!;
 
-        [Params(6, 25, 1024)]
-        public int StringLength { get; set; }
-
-        [Params(PairKind.Similar, PairKind.Dissimilar)]
-        public PairKind Kind { get; set; }
-
-        [GlobalSetup]
-        public void Setup() {
-            var baseStrings = Program.RandomStrings(this.StringLength, this.StringLength, PairCount * 2, 24, seed: 1);
-            this.left = new string[PairCount];
-            this.right = new string[PairCount];
-            for (int i = 0; i < PairCount; i++) {
-                this.left[i] = baseStrings[i];
-                this.right[i] = this.Kind == PairKind.Similar
-                    ? Program.MutateWithTwoEdits(baseStrings[i], i)
-                    : baseStrings[PairCount + i];
-            }
+        public override void Setup() {
+            base.Setup();
             this.damerau = new DamerauOSA(this.StringLength);
         }
 

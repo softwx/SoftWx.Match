@@ -1,11 +1,9 @@
-﻿// Copyright © 2015-2026 Steve Hatchett
+// Copyright © 2015-2026 Steve Hatchett
 // SPDX-License-Identifier: MIT
 // Released under the MIT License the text of which appears at the end of this file.
 // <authors> Steve Hatchett
 
-#if NET8_0_OR_GREATER
 using System;
-#endif
 
 namespace SoftWx.Match {
     /// <summary>The Distance class provides threadsafe static methods that compute the
@@ -35,20 +33,7 @@ namespace SoftWx.Match {
         public static int Levenshtein(this string? string1, string? string2) {
             if (string1 == null) return (string2 ?? string.Empty).Length;
             if (string2 == null) return string1.Length;
-#if NET8_0_OR_GREATER
-            return Levenshtein(string1.AsSpan(), string2.AsSpan());
-#else
-            // if strings of different lengths, ensure shorter string is in string1. This can result in a little
-            // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) (string1, string2) = (string2, string1);
-
-            // identify common suffix and/or prefix that can be ignored
-            Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
-            if (len1 == 0) return len2;
-            if (len1 == 1) return Helpers.SingleCharDistance(string1, string2, len2, start);
-
-            return Match.Levenshtein.DistanceCore(string1, string2, len1, len2, start);
-#endif
+            return Match.Levenshtein.DistanceStatic(string1.AsSpan(), string2.AsSpan());
         }
 
         /// <summary>Compute and return the Levenshtein edit distance between two strings.</summary>
@@ -62,30 +47,7 @@ namespace SoftWx.Match {
         /// difference between the strings increases.</returns>
         public static int Levenshtein(this string? string1, string? string2, int maxDistance) {
             if (string1 == null || string2 == null) return Helpers.NullDistanceResults(string1, string2, maxDistance);
-#if NET8_0_OR_GREATER
-            return Levenshtein(string1.AsSpan(), string2.AsSpan(), maxDistance);
-#else
-            if (maxDistance <= 0) return (string1 == string2) ? 0 : -1;
-
-            // if strings of different lengths, ensure shorter string is in string1. This can result in a little
-            // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) (string1, string2) = (string2, string1);
-            if (string2.Length - string1.Length > maxDistance) return -1;
-
-            // identify common suffix and/or prefix that can be ignored
-            Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
-            if (len1 == 0) return len2;
-            if (maxDistance == 1) return (len2 == 1) ? 1 : -1;
-            if (len1 == 1) {
-                int dist = Helpers.SingleCharDistance(string1, string2, len2, start);
-                return (dist <= maxDistance) ? dist : -1;
-            }
-
-            if (maxDistance < len2) {
-                return Match.Levenshtein.DistanceCore(string1, string2, len1, len2, start, maxDistance);
-            }
-            return Match.Levenshtein.DistanceCore(string1, string2, len1, len2, start);
-#endif
+            return Match.Levenshtein.DistanceStatic(string1.AsSpan(), string2.AsSpan(), maxDistance);
         }
 
         /// <summary>Compute and return the Damerau-Levenshtein optimal string
@@ -99,20 +61,7 @@ namespace SoftWx.Match {
         public static int DamerauOSA(this string? string1, string? string2) {
             if (string1 == null) return (string2 ?? string.Empty).Length;
             if (string2 == null) return string1.Length;
-#if NET8_0_OR_GREATER
-            return DamerauOSA(string1.AsSpan(), string2.AsSpan());
-#else
-            // if strings of different lengths, ensure shorter string is in string1. This can result in a little
-            // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) (string1, string2) = (string2, string1);
-
-            // identify common suffix and/or prefix that can be ignored
-            Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
-            if (len1 == 0) return len2;
-            if (len1 == 1) return Helpers.SingleCharDistance(string1, string2, len2, start);
-
-            return Match.DamerauOSA.DistanceCore(string1, string2, len1, len2, start);
-#endif
+            return Match.DamerauOSA.DistanceStatic(string1.AsSpan(), string2.AsSpan());
         }
 
         /// <summary>Compute and return the Damerau-Levenshtein optimal string
@@ -127,32 +76,7 @@ namespace SoftWx.Match {
         /// difference between the strings increases.</returns>
         public static int DamerauOSA(this string? string1, string? string2, int maxDistance) {
             if (string1 == null || string2 == null) return Helpers.NullDistanceResults(string1, string2, maxDistance);
-#if NET8_0_OR_GREATER
-            return DamerauOSA(string1.AsSpan(), string2.AsSpan(), maxDistance);
-#else
-            if (maxDistance <= 0) return (string1 == string2) ? 0 : -1;
-
-            // if strings of different lengths, ensure shorter string is in string1. This can result in a little
-            // faster speed by spending more time spinning just the inner loop during the main processing.
-            if (string1.Length > string2.Length) (string1, string2) = (string2, string1);
-            if (string2.Length - string1.Length > maxDistance) return -1;
-
-            // identify common suffix and/or prefix that can be ignored
-            Helpers.PrefixSuffixPrep(string1, string2, out int len1, out int len2, out int start);
-            if (len1 == 0) return len2;
-            if (maxDistance == 1) {
-                return (len2 == 1 || Helpers.IsSingleTransposition(string1, string2, len1, len2, start)) ? 1 : -1;
-            }
-            if (len1 == 1) {
-                int dist = Helpers.SingleCharDistance(string1, string2, len2, start);
-                return (dist <= maxDistance) ? dist : -1;
-            }
-
-            if (maxDistance < len2) {
-                return Match.DamerauOSA.DistanceCore(string1, string2, len1, len2, start, maxDistance);
-            }
-            return Match.DamerauOSA.DistanceCore(string1, string2, len1, len2, start);
-#endif
+            return Match.DamerauOSA.DistanceStatic(string1.AsSpan(), string2.AsSpan(), maxDistance);
         }
 
 #if NET8_0_OR_GREATER
@@ -163,19 +87,8 @@ namespace SoftWx.Match {
         /// <param name="string2">The other character span to compare.</param>
         /// <returns>0 if the spans are equivalent, otherwise a positive number whose
         /// magnitude increases as difference between the spans increases.</returns>
-        public static int Levenshtein(this ReadOnlySpan<char> string1, ReadOnlySpan<char> string2) {
-            if (string1.Length > string2.Length) {
-                ReadOnlySpan<char> t = string1;
-                string1 = string2;
-                string2 = t;
-            }
-
-            Helpers.PrefixSuffixPrep(ref string1, ref string2);
-            if (string1.Length == 0) return string2.Length;
-            if (string1.Length == 1) return Helpers.SingleCharDistance(string1, string2);
-
-            return Match.Levenshtein.DistanceCore(string1, string2);
-        }
+        public static int Levenshtein(this ReadOnlySpan<char> string1, ReadOnlySpan<char> string2) =>
+            Match.Levenshtein.DistanceStatic(string1, string2);
 
         /// <summary>Compute and return the Levenshtein edit distance between two character spans.</summary>
         /// <remarks>https://github.com/softwx/SoftWx.Match
@@ -186,30 +99,8 @@ namespace SoftWx.Match {
         /// <returns>-1 if the distance is greater than the maxDistance, 0 if the spans
         /// are equivalent, otherwise a positive number whose magnitude increases as
         /// difference between the spans increases.</returns>
-        public static int Levenshtein(this ReadOnlySpan<char> string1, ReadOnlySpan<char> string2, int maxDistance) {
-            if (maxDistance <= 0) return string1.SequenceEqual(string2) ? 0 : -1;
-
-            if (string1.Length > string2.Length) {
-                ReadOnlySpan<char> t = string1;
-                string1 = string2;
-                string2 = t;
-            }
-            if (string2.Length - string1.Length > maxDistance) return -1;
-
-            Helpers.PrefixSuffixPrep(ref string1, ref string2);
-            if (string1.Length == 0) return string2.Length;
-            // After PrefixSuffixPrep both ends differ, so distance == 1 iff both trimmed spans have length 1.
-            if (maxDistance == 1) return (string2.Length == 1) ? 1 : -1;
-            if (string1.Length == 1) {
-                int dist = Helpers.SingleCharDistance(string1, string2);
-                return (dist <= maxDistance) ? dist : -1;
-            }
-
-            if (maxDistance < string2.Length) {
-                return Match.Levenshtein.DistanceCore(string1, string2, maxDistance);
-            }
-            return Match.Levenshtein.DistanceCore(string1, string2);
-        }
+        public static int Levenshtein(this ReadOnlySpan<char> string1, ReadOnlySpan<char> string2, int maxDistance) =>
+            Match.Levenshtein.DistanceStatic(string1, string2, maxDistance);
 
         /// <summary>Compute and return the Damerau-Levenshtein optimal string
         /// alignment edit distance between two character spans.</summary>
@@ -219,19 +110,8 @@ namespace SoftWx.Match {
         /// <param name="string2">The other character span to compare.</param>
         /// <returns>0 if the spans are equivalent, otherwise a positive number whose
         /// magnitude increases as difference between the spans increases.</returns>
-        public static int DamerauOSA(this ReadOnlySpan<char> string1, ReadOnlySpan<char> string2) {
-            if (string1.Length > string2.Length) {
-                ReadOnlySpan<char> t = string1;
-                string1 = string2;
-                string2 = t;
-            }
-
-            Helpers.PrefixSuffixPrep(ref string1, ref string2);
-            if (string1.Length == 0) return string2.Length;
-            if (string1.Length == 1) return Helpers.SingleCharDistance(string1, string2);
-
-            return Match.DamerauOSA.DistanceCore(string1, string2);
-        }
+        public static int DamerauOSA(this ReadOnlySpan<char> string1, ReadOnlySpan<char> string2) =>
+            Match.DamerauOSA.DistanceStatic(string1, string2);
 
         /// <summary>Compute and return the Damerau-Levenshtein optimal string
         /// alignment edit distance between two character spans.</summary>
@@ -243,32 +123,8 @@ namespace SoftWx.Match {
         /// <returns>-1 if the distance is greater than the maxDistance, 0 if the spans
         /// are equivalent, otherwise a positive number whose magnitude increases as
         /// difference between the spans increases.</returns>
-        public static int DamerauOSA(this ReadOnlySpan<char> string1, ReadOnlySpan<char> string2, int maxDistance) {
-            if (maxDistance <= 0) return string1.SequenceEqual(string2) ? 0 : -1;
-
-            if (string1.Length > string2.Length) {
-                ReadOnlySpan<char> t = string1;
-                string1 = string2;
-                string2 = t;
-            }
-            if (string2.Length - string1.Length > maxDistance) return -1;
-
-            Helpers.PrefixSuffixPrep(ref string1, ref string2);
-            if (string1.Length == 0) return string2.Length;
-            // After PrefixSuffixPrep both ends differ, so distance == 1 iff len2 == 1 or a 2-char transposition.
-            if (maxDistance == 1) {
-                return (string2.Length == 1 || Helpers.IsSingleTransposition(string1, string2)) ? 1 : -1;
-            }
-            if (string1.Length == 1) {
-                int dist = Helpers.SingleCharDistance(string1, string2);
-                return (dist <= maxDistance) ? dist : -1;
-            }
-
-            if (maxDistance < string2.Length) {
-                return Match.DamerauOSA.DistanceCore(string1, string2, maxDistance);
-            }
-            return Match.DamerauOSA.DistanceCore(string1, string2);
-        }
+        public static int DamerauOSA(this ReadOnlySpan<char> string1, ReadOnlySpan<char> string2, int maxDistance) =>
+            Match.DamerauOSA.DistanceStatic(string1, string2, maxDistance);
 #endif
     }
 }

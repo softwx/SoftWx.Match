@@ -123,6 +123,11 @@ dotnet run --project SoftWx.Match.Benchmark -c Release
 
 ## Release Notes
 
+**v3.0.2**
+- Added an internal `netstandard2.0` span shim (`CharSpan`/`IntSpan`, zero-overhead aliases for `ReadOnlySpan<char>`/`Span<int>` on `.NET 8+`) to unify core DP algorithms and helper paths across target frameworks
+- Consolidated duplicated fast-path, `Similarity`, and static facade logic, cutting library code size by ~28% and eliminating mid-method `#if` directives while preserving `.NET 8+` performance
+- Minor internal code cleanup and benchmark setup deduplication
+
 **v3.0.1**
 - Updated copyright attribution to Steve Hatchett, removed inactive company metadata, and added `SPDX-License-Identifier: MIT` headers
 - Updated blog links to HTTPS
