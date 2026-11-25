@@ -43,6 +43,84 @@ jobs:
       - name: Test (netstandard2.0 target)
         run: dotnet test SoftWx.Match.Test/SoftWx.Match.Test.csproj --configuration Release -f net8.0 -p:TestNetStandard=true --verbosity normal
 
+      - name: Test (.NET 8, Debug)
+        run: dotnet test SoftWx.Match.Test/SoftWx.Match.Test.csproj --configuration Debug -f net8.0 --verbosity normal
+
+      - name: Test (netstandard2.0 target, Debug)
+        run: dotnet test SoftWx.Match.Test/SoftWx.Match.Test.csproj --configuration Debug -f net8.0 -p:TestNetStandard=true --verbosity normal
+
+      - name: Verify standalone single-algorithm copyability (.NET 8 & netstandard2.0)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path ([System.IO.Path]::GetTempPath()) "softwx-copytest-$([guid]::NewGuid().ToString('N'))"
+          try {
+            foreach ($algo in @('Levenshtein', 'DamerauOSA')) {
+              $dir = Join-Path $root $algo
+              New-Item -ItemType Directory -Path $dir -Force | Out-Null
+              Copy-Item "SoftWx.Match/$algo.cs", "SoftWx.Match/Helpers.cs" $dir
+              $srcPath = Join-Path $dir "$algo.cs"
+              (Get-Content $srcPath -Raw).Replace(' : IDistance, ISimilarity', '') | Set-Content $srcPath -NoNewline
+              @'
+          <Project Sdk="Microsoft.NET.Sdk">
+            <PropertyGroup>
+              <OutputType>Exe</OutputType>
+              <TargetFramework>net8.0</TargetFramework>
+              <Nullable>enable</Nullable>
+              <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+            </PropertyGroup>
+          </Project>
+          '@ | Set-Content (Join-Path $dir 'copytest.csproj')
+              if ($algo -eq 'Levenshtein') {
+                @'
+          using System;
+          using SoftWx.Match;
+          var ed = new Levenshtein();
+          if (ed.Distance("kitten", "sitting") != 3
+              || Distance.Levenshtein("kitten", "sitting") != 3
+              || "kitten".AsSpan().Levenshtein("sitting".AsSpan()) != 3
+              || Math.Abs(Similarity.Levenshtein("flintstone", "hanson") - 0.4) > 1e-12) {
+              throw new InvalidOperationException("Levenshtein standalone copy check failed.");
+          }
+          Console.WriteLine("Levenshtein standalone copy check passed.");
+          '@ | Set-Content (Join-Path $dir 'Program.cs')
+              } else {
+                @'
+          using System;
+          using SoftWx.Match;
+          var ed = new DamerauOSA();
+          if (ed.Distance("ca", "ac") != 1
+              || Distance.DamerauOSA("ca", "ac") != 1
+              || "ca".AsSpan().DamerauOSA("ac".AsSpan()) != 1
+              || Math.Abs(Similarity.DamerauOSA("flintstone", "flintsotne") - 0.9) > 1e-12) {
+              throw new InvalidOperationException("DamerauOSA standalone copy check failed.");
+          }
+          Console.WriteLine("DamerauOSA standalone copy check passed.");
+          '@ | Set-Content (Join-Path $dir 'Program.cs')
+              }
+              dotnet run --project (Join-Path $dir 'copytest.csproj') -c Release
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+              $nsDir = Join-Path $root "$algo-ns20"
+              New-Item -ItemType Directory -Path $nsDir -Force | Out-Null
+              Copy-Item $srcPath, "SoftWx.Match/Helpers.cs", "SoftWx.Match/SpanShim.cs" $nsDir
+              @'
+          <Project Sdk="Microsoft.NET.Sdk">
+            <PropertyGroup>
+              <TargetFramework>netstandard2.0</TargetFramework>
+              <LangVersion>latest</LangVersion>
+              <Nullable>enable</Nullable>
+              <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+            </PropertyGroup>
+          </Project>
+          '@ | Set-Content (Join-Path $nsDir 'copytest-ns20.csproj')
+              dotnet build (Join-Path $nsDir 'copytest-ns20.csproj') -c Release
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            }
+          } finally {
+            Remove-Item -Recurse -Force $root -ErrorAction SilentlyContinue
+          }
+
       - name: Install NativeAOT prerequisites (Linux)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev

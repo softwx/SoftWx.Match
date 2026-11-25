@@ -3,6 +3,10 @@
 // Released under the MIT License the text of which appears at the end of this file.
 // <authors> Steve Hatchett
 
+#if NET8_0_OR_GREATER
+using System;
+#endif
+
 namespace SoftWx.Match {
     /// <summary>Types implementing the IDistance interface provide methods
     /// for computing a relative distance between two strings.</summary>
@@ -22,6 +26,32 @@ namespace SoftWx.Match {
         /// are equivalent, otherwise a positive number whose magnitude increases as
         /// difference between the strings increases.</returns>
         double Distance(string? string1, string? string2, double maxDistance);
+
+#if NET8_0_OR_GREATER
+        /// <summary>Return a measure of the distance between two character spans.</summary>
+        /// <remarks>The default implementation converts the spans to strings and delegates to
+        /// <see cref="Distance(string, string)"/>. Implementers should override this method
+        /// to avoid string allocations.</remarks>
+        /// <param name="string1">One of the character spans to compare.</param>
+        /// <param name="string2">The other character span to compare.</param>
+        /// <returns>0 if the spans are equivalent, otherwise a positive number whose
+        /// magnitude increases as difference between the spans increases.</returns>
+        double Distance(ReadOnlySpan<char> string1, ReadOnlySpan<char> string2) =>
+            Distance(string1.ToString(), string2.ToString());
+
+        /// <summary>Return a measure of the distance between two character spans.</summary>
+        /// <remarks>The default implementation converts the spans to strings and delegates to
+        /// <see cref="Distance(string, string, double)"/>. Implementers should override this method
+        /// to avoid string allocations.</remarks>
+        /// <param name="string1">One of the character spans to compare.</param>
+        /// <param name="string2">The other character span to compare.</param>
+        /// <param name="maxDistance">The maximum distance that is of interest.</param>
+        /// <returns>-1 if the distance is greater than the maxDistance, 0 if the spans
+        /// are equivalent, otherwise a positive number whose magnitude increases as
+        /// difference between the spans increases.</returns>
+        double Distance(ReadOnlySpan<char> string1, ReadOnlySpan<char> string2, double maxDistance) =>
+            Distance(string1.ToString(), string2.ToString(), maxDistance);
+#endif
     }
 }
 /*

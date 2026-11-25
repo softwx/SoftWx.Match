@@ -3,8 +3,6 @@
 // Released under the MIT License the text of which appears at the end of this file.
 // <authors> Steve Hatchett
 
-using System;
-
 namespace SoftWx.Match {
     /// <summary>The Distance class provides threadsafe static methods that compute the
     /// distance between two strings.</summary>
@@ -22,110 +20,9 @@ namespace SoftWx.Match {
     /// extension methods as in this example:
     ///   <code>var distance = "hello".Levenshtein("goodbye");</code>
     /// </remarks>
-    public static class Distance {
-        /// <summary>Compute and return the Levenshtein edit distance between two strings.</summary>
-        /// <remarks>https://github.com/softwx/SoftWx.Match
-        /// This method is threadsafe.</remarks>
-        /// <param name="string1">One of the strings to compare.</param>
-        /// <param name="string2">The other string to compare.</param>
-        /// <returns>0 if the strings are equivalent, otherwise a positive number whose
-        /// magnitude increases as difference between the strings increases.</returns>
-        public static int Levenshtein(this string? string1, string? string2) {
-            if (string1 == null) return (string2 ?? string.Empty).Length;
-            if (string2 == null) return string1.Length;
-            return Match.Levenshtein.DistanceStatic(string1.AsSpan(), string2.AsSpan());
-        }
-
-        /// <summary>Compute and return the Levenshtein edit distance between two strings.</summary>
-        /// <remarks>https://github.com/softwx/SoftWx.Match
-        /// This method is threadsafe.</remarks>
-        /// <param name="string1">One of the strings to compare.</param>
-        /// <param name="string2">The other string to compare.</param>
-        /// <param name="maxDistance">The maximum distance that is of interest.</param>
-        /// <returns>-1 if the distance is greater than the maxDistance, 0 if the strings
-        /// are equivalent, otherwise a positive number whose magnitude increases as
-        /// difference between the strings increases.</returns>
-        public static int Levenshtein(this string? string1, string? string2, int maxDistance) {
-            if (string1 == null || string2 == null) return Helpers.NullDistanceResults(string1, string2, maxDistance);
-            return Match.Levenshtein.DistanceStatic(string1.AsSpan(), string2.AsSpan(), maxDistance);
-        }
-
-        /// <summary>Compute and return the Damerau-Levenshtein optimal string
-        /// alignment edit distance between two strings.</summary>
-        /// <remarks>https://github.com/softwx/SoftWx.Match
-        /// This method is threadsafe.</remarks>
-        /// <param name="string1">One of the strings to compare.</param>
-        /// <param name="string2">The other string to compare.</param>
-        /// <returns>0 if the strings are equivalent, otherwise a positive number whose
-        /// magnitude increases as difference between the strings increases.</returns>
-        public static int DamerauOSA(this string? string1, string? string2) {
-            if (string1 == null) return (string2 ?? string.Empty).Length;
-            if (string2 == null) return string1.Length;
-            return Match.DamerauOSA.DistanceStatic(string1.AsSpan(), string2.AsSpan());
-        }
-
-        /// <summary>Compute and return the Damerau-Levenshtein optimal string
-        /// alignment edit distance between two strings.</summary>
-        /// <remarks>https://github.com/softwx/SoftWx.Match
-        /// This method is threadsafe.</remarks>
-        /// <param name="string1">One of the strings to compare.</param>
-        /// <param name="string2">The other string to compare.</param>
-        /// <param name="maxDistance">The maximum distance that is of interest.</param>
-        /// <returns>-1 if the distance is greater than the maxDistance, 0 if the strings
-        /// are equivalent, otherwise a positive number whose magnitude increases as
-        /// difference between the strings increases.</returns>
-        public static int DamerauOSA(this string? string1, string? string2, int maxDistance) {
-            if (string1 == null || string2 == null) return Helpers.NullDistanceResults(string1, string2, maxDistance);
-            return Match.DamerauOSA.DistanceStatic(string1.AsSpan(), string2.AsSpan(), maxDistance);
-        }
-
-#if NET8_0_OR_GREATER
-        /// <summary>Compute and return the Levenshtein edit distance between two character spans.</summary>
-        /// <remarks>https://github.com/softwx/SoftWx.Match
-        /// This method is threadsafe.</remarks>
-        /// <param name="string1">One of the character spans to compare.</param>
-        /// <param name="string2">The other character span to compare.</param>
-        /// <returns>0 if the spans are equivalent, otherwise a positive number whose
-        /// magnitude increases as difference between the spans increases.</returns>
-        public static int Levenshtein(this ReadOnlySpan<char> string1, ReadOnlySpan<char> string2) =>
-            Match.Levenshtein.DistanceStatic(string1, string2);
-
-        /// <summary>Compute and return the Levenshtein edit distance between two character spans.</summary>
-        /// <remarks>https://github.com/softwx/SoftWx.Match
-        /// This method is threadsafe.</remarks>
-        /// <param name="string1">One of the character spans to compare.</param>
-        /// <param name="string2">The other character span to compare.</param>
-        /// <param name="maxDistance">The maximum distance that is of interest.</param>
-        /// <returns>-1 if the distance is greater than the maxDistance, 0 if the spans
-        /// are equivalent, otherwise a positive number whose magnitude increases as
-        /// difference between the spans increases.</returns>
-        public static int Levenshtein(this ReadOnlySpan<char> string1, ReadOnlySpan<char> string2, int maxDistance) =>
-            Match.Levenshtein.DistanceStatic(string1, string2, maxDistance);
-
-        /// <summary>Compute and return the Damerau-Levenshtein optimal string
-        /// alignment edit distance between two character spans.</summary>
-        /// <remarks>https://github.com/softwx/SoftWx.Match
-        /// This method is threadsafe.</remarks>
-        /// <param name="string1">One of the character spans to compare.</param>
-        /// <param name="string2">The other character span to compare.</param>
-        /// <returns>0 if the spans are equivalent, otherwise a positive number whose
-        /// magnitude increases as difference between the spans increases.</returns>
-        public static int DamerauOSA(this ReadOnlySpan<char> string1, ReadOnlySpan<char> string2) =>
-            Match.DamerauOSA.DistanceStatic(string1, string2);
-
-        /// <summary>Compute and return the Damerau-Levenshtein optimal string
-        /// alignment edit distance between two character spans.</summary>
-        /// <remarks>https://github.com/softwx/SoftWx.Match
-        /// This method is threadsafe.</remarks>
-        /// <param name="string1">One of the character spans to compare.</param>
-        /// <param name="string2">The other character span to compare.</param>
-        /// <param name="maxDistance">The maximum distance that is of interest.</param>
-        /// <returns>-1 if the distance is greater than the maxDistance, 0 if the spans
-        /// are equivalent, otherwise a positive number whose magnitude increases as
-        /// difference between the spans increases.</returns>
-        public static int DamerauOSA(this ReadOnlySpan<char> string1, ReadOnlySpan<char> string2, int maxDistance) =>
-            Match.DamerauOSA.DistanceStatic(string1, string2, maxDistance);
-#endif
+    public static partial class Distance {
+        // Algorithm-specific static methods live alongside their implementations
+        // (e.g., Levenshtein.cs, DamerauOSA.cs) so individual algorithms can be copied standalone.
     }
 }
 /*

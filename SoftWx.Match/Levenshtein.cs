@@ -5,6 +5,10 @@
 
 using System;
 using System.Runtime.CompilerServices;
+#if NET8_0_OR_GREATER
+using CharSpan = System.ReadOnlySpan<char>;
+using IntSpan = System.Span<int>;
+#endif
 
 namespace SoftWx.Match {
     /// <summary>
@@ -26,6 +30,7 @@ namespace SoftWx.Match {
     /// and Similarity classes if that is required.</remarks>
     public class Levenshtein : IDistance, ISimilarity {
         private const int DefaultMaxCachedLength = 512;
+        private const int MinBufferLength = 32;
         private readonly int maxCachedLength;
         private int[] baseChar1Costs;
 
@@ -200,6 +205,14 @@ namespace SoftWx.Match {
                 : DistanceCore(s1, s2);
         }
 
+        // Computes next buffer capacity via geometric growth from MinBufferLength, capped at maxLength.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int GrowBufferLength(int required, int current, int maxLength) {
+            int doubled = (current <= maxLength / 2) ? current * 2 : maxLength;
+            int grown = Math.Max(MinBufferLength, doubled);
+            return Math.Min(maxLength, Math.Max(required, grown));
+        }
+
         // Reuses the instance buffer up to maxCachedLength; falls back to DistanceCore for oversized inputs
         // so one-off giant strings don't permanently pin large buffers on a long-lived instance.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -210,7 +223,7 @@ namespace SoftWx.Match {
                 return Distance(s1, s2, costs);
             }
             if (len2 <= this.maxCachedLength) {
-                costs = this.baseChar1Costs = new int[len2];
+                costs = this.baseChar1Costs = new int[GrowBufferLength(len2, costs.Length, this.maxCachedLength)];
                 return Distance(s1, s2, costs);
             }
             return DistanceCore(s1, s2);
@@ -225,7 +238,7 @@ namespace SoftWx.Match {
                 return Distance(s1, s2, maxDistance, costs);
             }
             if (len2 <= this.maxCachedLength) {
-                costs = this.baseChar1Costs = new int[len2];
+                costs = this.baseChar1Costs = new int[GrowBufferLength(len2, costs.Length, this.maxCachedLength)];
                 return Distance(s1, s2, maxDistance, costs);
             }
             return DistanceCore(s1, s2, maxDistance);
@@ -281,9 +294,13 @@ namespace SoftWx.Match {
         private static int[] GetThreadCosts(int len2) {
             int[]? costs = tlsChar1Costs;
             if (costs != null && len2 <= costs.Length) return costs;
-            int[] fresh = new int[len2];
-            if (len2 <= ThreadCacheMaxLength) tlsChar1Costs = fresh;
-            return fresh;
+            if (len2 <= ThreadCacheMaxLength) {
+                int currentLen = (costs != null) ? costs.Length : 0;
+                int[] fresh = new int[GrowBufferLength(len2, currentLen, ThreadCacheMaxLength)];
+                tlsChar1Costs = fresh;
+                return fresh;
+            }
+            return new int[len2];
         }
 #endif
 
@@ -362,6 +379,125 @@ namespace SoftWx.Match {
             }
             return currentCost;
         }
+    }
+
+    public static partial class Distance {
+        /// <summary>Compute and return the Levenshtein edit distance between two strings.</summary>
+        /// <remarks>https://github.com/softwx/SoftWx.Match
+        /// This method is threadsafe.</remarks>
+        /// <param name="string1">One of the strings to compare.</param>
+        /// <param name="string2">The other string to compare.</param>
+        /// <returns>0 if the strings are equivalent, otherwise a positive number whose
+        /// magnitude increases as difference between the strings increases.</returns>
+        public static int Levenshtein(this string? string1, string? string2) {
+            if (string1 == null) return (string2 ?? string.Empty).Length;
+            if (string2 == null) return string1.Length;
+            return Match.Levenshtein.DistanceStatic(string1.AsSpan(), string2.AsSpan());
+        }
+
+        /// <summary>Compute and return the Levenshtein edit distance between two strings.</summary>
+        /// <remarks>https://github.com/softwx/SoftWx.Match
+        /// This method is threadsafe.</remarks>
+        /// <param name="string1">One of the strings to compare.</param>
+        /// <param name="string2">The other string to compare.</param>
+        /// <param name="maxDistance">The maximum distance that is of interest.</param>
+        /// <returns>-1 if the distance is greater than the maxDistance, 0 if the strings
+        /// are equivalent, otherwise a positive number whose magnitude increases as
+        /// difference between the strings increases.</returns>
+        public static int Levenshtein(this string? string1, string? string2, int maxDistance) {
+            if (string1 == null || string2 == null) return Helpers.NullDistanceResults(string1, string2, maxDistance);
+            return Match.Levenshtein.DistanceStatic(string1.AsSpan(), string2.AsSpan(), maxDistance);
+        }
+
+#if NET8_0_OR_GREATER
+        /// <summary>Compute and return the Levenshtein edit distance between two character spans.</summary>
+        /// <remarks>https://github.com/softwx/SoftWx.Match
+        /// This method is threadsafe.</remarks>
+        /// <param name="string1">One of the character spans to compare.</param>
+        /// <param name="string2">The other character span to compare.</param>
+        /// <returns>0 if the spans are equivalent, otherwise a positive number whose
+        /// magnitude increases as difference between the spans increases.</returns>
+        public static int Levenshtein(this ReadOnlySpan<char> string1, ReadOnlySpan<char> string2) =>
+            Match.Levenshtein.DistanceStatic(string1, string2);
+
+        /// <summary>Compute and return the Levenshtein edit distance between two character spans.</summary>
+        /// <remarks>https://github.com/softwx/SoftWx.Match
+        /// This method is threadsafe.</remarks>
+        /// <param name="string1">One of the character spans to compare.</param>
+        /// <param name="string2">The other character span to compare.</param>
+        /// <param name="maxDistance">The maximum distance that is of interest.</param>
+        /// <returns>-1 if the distance is greater than the maxDistance, 0 if the spans
+        /// are equivalent, otherwise a positive number whose magnitude increases as
+        /// difference between the spans increases.</returns>
+        public static int Levenshtein(this ReadOnlySpan<char> string1, ReadOnlySpan<char> string2, int maxDistance) =>
+            Match.Levenshtein.DistanceStatic(string1, string2, maxDistance);
+#endif
+    }
+
+    public static partial class Similarity {
+        /// <summary>Return Levenshtein similarity between two strings (1 - (levenshtein distance / len of longer string)).</summary>
+        /// <remarks>https://github.com/softwx/SoftWx.Match
+        /// This method is threadsafe.</remarks>
+        /// <param name="string1">One of the strings to compare.</param>
+        /// <param name="string2">The other string to compare.</param>
+        /// <returns>The degree of similarity 0 to 1.0, where 0 represents a lack of any
+        /// notable similarity, and 1 represents equivalent strings.</returns>
+        public static double Levenshtein(string? string1, string? string2) {
+            if (string1 == null) return (string2 == null) ? 1 : 0;
+            if (string2 == null) return 0;
+            return Match.Levenshtein.DistanceStatic(string1.AsSpan(), string2.AsSpan())
+                .ToSimilarity(Math.Max(string1.Length, string2.Length));
+        }
+
+        /// <summary>Return Levenshtein similarity between two strings (1 - (levenshtein distance / len of longer string)).</summary>
+        /// <remarks>https://github.com/softwx/SoftWx.Match
+        /// This method is threadsafe.</remarks>
+        /// <param name="string1">One of the strings to compare.</param>
+        /// <param name="string2">The other string to compare.</param>
+        /// <param name="minSimilarity">The minimum similarity that is of interest.</param>
+        /// <returns>The degree of similarity 0 to 1.0, where -1 represents a similarity
+        /// lower than minSimilarity, otherwise, a number between 0 and 1.0 where 0
+        /// represents a lack of any notable similarity, and 1 represents equivalent
+        /// strings.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when minSimilarity is NaN or outside the range 0 to 1.0.</exception>
+        public static double Levenshtein(string? string1, string? string2, double minSimilarity) {
+            Helpers.ValidateMinSimilarity(minSimilarity);
+            if (string1 == null || string2 == null) return Helpers.NullSimilarityResults(string1, string2, minSimilarity);
+            int maxLen = Math.Max(string1.Length, string2.Length);
+            return Match.Levenshtein.DistanceStatic(string1.AsSpan(), string2.AsSpan(), minSimilarity.ToDistance(maxLen))
+                .ToSimilarity(maxLen);
+        }
+
+#if NET8_0_OR_GREATER
+        /// <summary>Return Levenshtein similarity between two character spans (1 - (levenshtein distance / len of longer span)).</summary>
+        /// <remarks>https://github.com/softwx/SoftWx.Match
+        /// This method is threadsafe.</remarks>
+        /// <param name="string1">One of the character spans to compare.</param>
+        /// <param name="string2">The other character span to compare.</param>
+        /// <returns>The degree of similarity 0 to 1.0, where 0 represents a lack of any
+        /// notable similarity, and 1 represents equivalent spans.</returns>
+        public static double Levenshtein(ReadOnlySpan<char> string1, ReadOnlySpan<char> string2) =>
+            Match.Levenshtein.DistanceStatic(string1, string2)
+                .ToSimilarity(Math.Max(string1.Length, string2.Length));
+
+        /// <summary>Return Levenshtein similarity between two character spans (1 - (levenshtein distance / len of longer span)).</summary>
+        /// <remarks>https://github.com/softwx/SoftWx.Match
+        /// This method is threadsafe.</remarks>
+        /// <param name="string1">One of the character spans to compare.</param>
+        /// <param name="string2">The other character span to compare.</param>
+        /// <param name="minSimilarity">The minimum similarity that is of interest.</param>
+        /// <returns>The degree of similarity 0 to 1.0, where -1 represents a similarity
+        /// lower than minSimilarity, otherwise, a number between 0 and 1.0 where 0
+        /// represents a lack of any notable similarity, and 1 represents equivalent
+        /// spans.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when minSimilarity is NaN or outside the range 0 to 1.0.</exception>
+        public static double Levenshtein(ReadOnlySpan<char> string1, ReadOnlySpan<char> string2, double minSimilarity) {
+            Helpers.ValidateMinSimilarity(minSimilarity);
+            int maxLen = Math.Max(string1.Length, string2.Length);
+            return Match.Levenshtein.DistanceStatic(string1, string2, minSimilarity.ToDistance(maxLen))
+                .ToSimilarity(maxLen);
+        }
+#endif
     }
 }
 /*

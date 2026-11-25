@@ -403,6 +403,15 @@ namespace SoftWx.Match.Test {
             Assert.ThrowsException<ArgumentOutOfRangeException>(() => Similarity.DamerauOSA("a".AsSpan(), "b".AsSpan(), -0.1));
             Assert.ThrowsException<ArgumentOutOfRangeException>(() => Similarity.DamerauOSA("a".AsSpan(), "b".AsSpan(), 1.1));
             Assert.ThrowsException<ArgumentOutOfRangeException>(() => Similarity.DamerauOSA("a".AsSpan(), "b".AsSpan(), double.NaN));
+
+            IDistance idist = ed;
+            ISimilarity isim = ed;
+            Assert.AreEqual(1, idist.Distance(slice1, slice2));
+            Assert.AreEqual(1, idist.Distance(slice1, slice2, 1));
+            Assert.AreEqual(-1, idist.Distance(slice1, slice2, 0.5));
+            Assert.AreEqual(0.75, isim.Similarity(slice1, slice2), 1e-12);
+            Assert.AreEqual(0.75, isim.Similarity(slice1, slice2, 0.75), 1e-12);
+            Assert.AreEqual(-1, isim.Similarity(slice1, slice2, 0.8));
         }
 #endif
 
@@ -488,6 +497,14 @@ namespace SoftWx.Match.Test {
             Assert.AreEqual(2, preSized.Distance(s1, s2, 2));
             Assert.AreEqual(2, Distance.DamerauOSA(s1, s2));
             Assert.AreEqual(2, Distance.DamerauOSA(s1, s2, 2));
+
+            // Exercise geometric growth capping when current capacity exceeds maxCachedLength / 2 (300 -> 512).
+            string mid1 = "x" + new string('a', 398) + "y";
+            string mid2 = "z" + new string('a', 398) + "w";
+            var midSized = new DamerauOSA(300);
+            Assert.AreEqual(2, midSized.Distance(mid1, mid2));
+            Assert.AreEqual(2, midSized.Distance(mid1, mid2, 2));
+            Assert.AreEqual(-1, midSized.Distance(mid1, mid2, 1));
         }
     }
 }

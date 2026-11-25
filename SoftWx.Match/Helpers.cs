@@ -5,11 +5,14 @@
 
 using System;
 using System.Runtime.CompilerServices;
+#if NET8_0_OR_GREATER
+using CharSpan = System.ReadOnlySpan<char>;
+#endif
 
 namespace SoftWx.Match {
     // Internal helper methods shared across distance and similarity implementations.
-    // CharSpan / IntSpan resolve to System.ReadOnlySpan<char> / System.Span<int> on .NET 8+
-    // and to lightweight internal shims on netstandard2.0 (see SpanShim.cs).
+    // CharSpan resolves to System.ReadOnlySpan<char> on .NET 8+
+    // and to a lightweight internal shim on netstandard2.0 (see SpanShim.cs).
     internal static class Helpers {
         // Determines the proper return value of an edit distance function when one or both strings are null.
         public static int NullDistanceResults(string? string1, string? string2, int maxDistance) {

@@ -12,6 +12,13 @@ C# library to support text and person name fuzzy matching, targeting `.NET Stand
 dotnet add package SoftWx.Match
 ```
 
+### Copying Source Files Directly
+
+SoftWx.Match has no external dependencies, and minimal internal dependencies. Each source file carries its MIT license so you can copy only the files you need directly into your project:
+
+- **`.NET 8+` (single algorithm — instance + static `Distance`/`Similarity` methods):** copy `Levenshtein.cs` (or `DamerauOSA.cs`) and `Helpers.cs`. If you don't need the interfaces, remove `: IDistance, ISimilarity` from the class declaration; otherwise also copy `IDistance.cs` and `ISimilarity.cs`.
+- **`.NET Standard 2.0` / older frameworks:** also include `SpanShim.cs`.
+
 ## Overview
 
 This project started as a place to publish code from a series of blog posts on optimizing the Levenshtein and Damerau-Levenshtein algorithms:
@@ -25,7 +32,9 @@ SoftWx.Match is a 100% safe managed C# implementation of Wagner-Fischer Levensht
 
 ## Distance
 
-Classes implementing `IDistance` compute the edit distance between two strings (`0` for equivalent strings, positive values as difference increases, or `-1` when exceeding `maxDistance`). Comparisons are case-sensitive (e.g. `"Fred"` vs. `"fred"` has distance `1`).
+Classes implementing `IDistance` compute the edit distance between two strings (`0` for equivalent strings, positive values as difference increases, or `-1` when exceeding `maxDistance`).
+
+Comparisons operate ordinally on UTF-16 code units (case-sensitive, without Unicode normalization — e.g. `"Fred"` vs. `"fred"` has distance `1`). If your use case calls for case-insensitive matching, folding diacritics, or canonical Unicode equivalence (such as NFC), normalize your strings as a preprocessing step before comparing them.
 
 ### Levenshtein
 
@@ -122,6 +131,13 @@ dotnet run --project SoftWx.Match.Benchmark -c Release
 ```
 
 ## Release Notes
+
+**v3.1.0**
+- Added `ReadOnlySpan<char>` default interface methods to `IDistance` and `ISimilarity` on `.NET 8+` without breaking existing implementers
+- Improved single-algorithm source copyability: moved `CharSpan`/`IntSpan` aliases to per-file `#if NET8_0_OR_GREATER` directives (making `SpanShim.cs` `netstandard2.0`-only) and split `Distance`/`Similarity` into `partial` classes alongside `Levenshtein.cs` and `DamerauOSA.cs`
+- Switched instance and `netstandard2.0` thread-local scratch buffers to geometric growth from a 32-element minimum to avoid repeated reallocations on varying word lengths
+- Hardened `netstandard2.0` `IntSpan.Slice` to reject nonzero start offsets in Release builds as well as Debug
+- Added Debug test runs and standalone single-algorithm copyability checks to CI, and documented direct file-copying and ordinal/normalization behavior in README
 
 **v3.0.2**
 - Added an internal `netstandard2.0` span shim (`CharSpan`/`IntSpan`, zero-overhead aliases for `ReadOnlySpan<char>`/`Span<int>` on `.NET 8+`) to unify core DP algorithms and helper paths across target frameworks

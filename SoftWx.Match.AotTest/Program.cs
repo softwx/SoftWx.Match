@@ -65,11 +65,15 @@ namespace SoftWx.Match.AotTest {
         private static void VerifyDistance(IDistance metric, string s1, string s2, double expected, double maxDist, double expectedBounded, string label) {
             AssertEqual(expected, metric.Distance(s1, s2), label);
             AssertEqual(expectedBounded, metric.Distance(s1, s2, maxDist), $"{label} bounded");
+            AssertEqual(expected, metric.Distance(s1.AsSpan(), s2.AsSpan()), $"{label} span");
+            AssertEqual(expectedBounded, metric.Distance(s1.AsSpan(), s2.AsSpan(), maxDist), $"{label} span bounded");
         }
 
         private static void VerifySimilarity(ISimilarity metric, string s1, string s2, double expected, double minSim, double expectedBounded, string label) {
             AssertEqual(expected, metric.Similarity(s1, s2), label);
             AssertEqual(expectedBounded, metric.Similarity(s1, s2, minSim), $"{label} bounded");
+            AssertEqual(expected, metric.Similarity(s1.AsSpan(), s2.AsSpan()), $"{label} span");
+            AssertEqual(expectedBounded, metric.Similarity(s1.AsSpan(), s2.AsSpan(), minSim), $"{label} span bounded");
         }
 
         private static void AssertEqual(int expected, int actual, string label) {

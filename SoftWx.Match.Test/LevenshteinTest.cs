@@ -401,6 +401,41 @@ namespace SoftWx.Match.Test {
             Assert.ThrowsException<ArgumentOutOfRangeException>(() => Similarity.Levenshtein("a".AsSpan(), "b".AsSpan(), -0.1));
             Assert.ThrowsException<ArgumentOutOfRangeException>(() => Similarity.Levenshtein("a".AsSpan(), "b".AsSpan(), 1.1));
             Assert.ThrowsException<ArgumentOutOfRangeException>(() => Similarity.Levenshtein("a".AsSpan(), "b".AsSpan(), double.NaN));
+
+            IDistance idist = ed;
+            ISimilarity isim = ed;
+            Assert.AreEqual(6, idist.Distance(slice1, slice2));
+            Assert.AreEqual(-1, idist.Distance(slice1, slice2, 2));
+            Assert.AreEqual(0.4, isim.Similarity(slice1, slice2), 1e-12);
+            Assert.AreEqual(-1, isim.Similarity(slice1, slice2, 0.5));
+        }
+
+        private sealed class StringOnlyMetric : IDistance, ISimilarity {
+            public double Distance(string? string1, string? string2) =>
+                SoftWx.Match.Distance.Levenshtein(string1, string2);
+
+            public double Distance(string? string1, string? string2, double maxDistance) =>
+                SoftWx.Match.Distance.Levenshtein(string1, string2, (int)maxDistance);
+
+            public double Similarity(string? string1, string? string2) =>
+                SoftWx.Match.Similarity.Levenshtein(string1, string2);
+
+            public double Similarity(string? string1, string? string2, double minSimilarity) =>
+                SoftWx.Match.Similarity.Levenshtein(string1, string2, minSimilarity);
+        }
+
+        [TestMethod]
+        public void InterfaceDefaultSpanMethodsShouldDelegateToStringMethods() {
+            var metric = new StringOnlyMetric();
+            IDistance idist = metric;
+            ISimilarity isim = metric;
+            ReadOnlySpan<char> slice1 = "xxflintstoneyy".AsSpan(2, 10);
+            ReadOnlySpan<char> slice2 = "zzhansonww".AsSpan(2, 6);
+
+            Assert.AreEqual(6, idist.Distance(slice1, slice2));
+            Assert.AreEqual(-1, idist.Distance(slice1, slice2, 2));
+            Assert.AreEqual(0.4, isim.Similarity(slice1, slice2), 1e-12);
+            Assert.AreEqual(-1, isim.Similarity(slice1, slice2, 0.5));
         }
 #endif
 
@@ -485,6 +520,14 @@ namespace SoftWx.Match.Test {
             Assert.AreEqual(2, preSized.Distance(s1, s2, 2));
             Assert.AreEqual(2, Distance.Levenshtein(s1, s2));
             Assert.AreEqual(2, Distance.Levenshtein(s1, s2, 2));
+
+            // Exercise geometric growth capping when current capacity exceeds maxCachedLength / 2 (300 -> 512).
+            string mid1 = "x" + new string('a', 398) + "y";
+            string mid2 = "z" + new string('a', 398) + "w";
+            var midSized = new Levenshtein(300);
+            Assert.AreEqual(2, midSized.Distance(mid1, mid2));
+            Assert.AreEqual(2, midSized.Distance(mid1, mid2, 2));
+            Assert.AreEqual(-1, midSized.Distance(mid1, mid2, 1));
         }
     }
 }

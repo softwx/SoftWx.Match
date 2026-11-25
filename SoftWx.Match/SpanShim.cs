@@ -3,16 +3,13 @@
 // Released under the MIT License the text of which appears at the end of this file.
 // <authors> Steve Hatchett
 
-#if NET8_0_OR_GREATER
-global using CharSpan = System.ReadOnlySpan<char>;
-global using IntSpan = System.Span<int>;
-#else
+#if !NET8_0_OR_GREATER
 using System;
 using System.Runtime.CompilerServices;
 
 namespace SoftWx.Match {
     // Lightweight netstandard2.0 stand-in for System.ReadOnlySpan<char> backed by a string slice.
-    // On .NET 8+, CharSpan is a global using alias for System.ReadOnlySpan<char> (zero overhead).
+    // On .NET 8+, CharSpan is a per-file using alias for System.ReadOnlySpan<char> (zero overhead).
     internal readonly struct CharSpan {
         private readonly string str;
         private readonly int start;
@@ -102,7 +99,7 @@ namespace SoftWx.Match {
 
     // Lightweight netstandard2.0 stand-in for System.Span<int> backed by an int[] starting at index 0.
     // Single 8-byte field so it passes in a CPU register on x64 with zero overhead vs raw int[].
-    // On .NET 8+, IntSpan is a global using alias for System.Span<int> (zero overhead).
+    // On .NET 8+, IntSpan is a per-file using alias for System.Span<int> (zero overhead).
     internal readonly struct IntSpan {
         private readonly int[] array;
 
@@ -123,11 +120,16 @@ namespace SoftWx.Match {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IntSpan Slice(int start, int length) {
+            if (start != 0) ThrowInvalidSliceStart(start);
 #if DEBUG
-            if (start != 0) throw new ArgumentOutOfRangeException(nameof(start), "IntSpan shim only supports slicing from index 0.");
             if ((uint)length > (uint)this.array.Length) throw new ArgumentOutOfRangeException(nameof(length));
 #endif
             return this;
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void ThrowInvalidSliceStart(int start) {
+            throw new ArgumentOutOfRangeException(nameof(start), start, "IntSpan shim only supports slicing from index 0.");
         }
     }
 
